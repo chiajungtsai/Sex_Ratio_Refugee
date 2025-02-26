@@ -1,0 +1,870 @@
+---
+title: "sex_ratio_w1_w2_analysis_supplementary_material_D"
+author: "Chia-Jung Tsai"
+date: "2024-05-10"
+output: html_document
+---
+---
+title: "sex_ratio_w1_w2_analysis_supplementary_material_C"
+author: "Chia-Jung Tsai"
+date: "2023-11-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(stringr)
+library(RColorBrewer)
+library(ggpubr)
+library(Hmisc)
+library(effsize)
+library(stringr)
+library(gt)
+library(data.table)
+library(rstatix) #Pairwise t test
+library(survey) #Weighted tests
+
+```
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+
+dt_for_sm <- readr::read_csv("Data/ATRP_imputed_pswt_v2.csv") # the data set with the bigger sale of weight on AGE (=AGE_2)
+dt_for_sm <- subset(dt_for_sm, select = -c(...1)) # delete the weird column of "...1" from csv format
+
+```
+
+```{r}
+dt_for_sm$scenario <- factor(dt_for_sm$equation,
+levels = c(1,2,3,4,5,6,7),
+labels = c("brown_male_0", "brown_male_50", "brown_male_100", "white_male_100", "German_male_0", "German_male_50", "German_male_100"))
+
+dt_for_sm$CONT <- factor(dt_for_sm$CONT,
+levels = c(0,1,2,3),
+labels = c("Never", " Once", "A few times","Several times"))
+
+dt_for_sm$REFDE <- factor(dt_for_sm$REFDE,
+levels = c(1,2,3,4),
+labels = c("lower than 1%", "1.5%", "3%","higher than 5%"))
+
+dt_for_sm$REFSTA <- factor(dt_for_sm$REFSTA,
+levels = c(1,2,3,4),
+labels = c("lower than 1%", "1.5%", "3%","higher than 5%"))
+
+dt_for_sm$REFNHB <- factor(dt_for_sm$REFNHB,
+levels = c(1,2,3,4),
+labels = c("lower than 1%", "1.5%", "3%","higher than 5%"))
+
+dt_for_sm$SEXDE <- factor(dt_for_sm$SEXDE,
+levels = c(1,2,3,4,5),
+labels = c("women>>men", "women>men", "women=men","women<men","women<<men"))
+
+dt_for_sm$SEXSTA <- factor(dt_for_sm$SEXSTA,
+levels = c(1,2,3,4,5),
+labels = c("women>>men", "women>men", "women=men","women<men","women<<men"))
+
+dt_for_sm$SEXNHB <- factor(dt_for_sm$SEXNHB,
+levels = c(1,2,3,4,5),
+labels = c("women>>men", "women>men", "women=men","women<men","women<<men"))
+
+dt_for_sm$AGE <- factor(dt_for_sm$AGE,
+levels = c(1,2,3,4,5,6,7,8,9,10),
+labels = c("18-24", "25-29", "30-34","35-39","40-44","45-49","50-54","55-59","60-64","Over65"))
+
+
+dt_for_sm$AGE_2 <- factor(dt_for_sm$AGE_2,
+levels = c(1,2,3,4,5),
+labels = c("18-29", "30-39","40-49","50-59","60-64"))
+
+
+dt_for_sm$SEX <- factor(dt_for_sm$SEX,
+levels = c(0,1,2),
+labels = c("Male", "Female", "Diverse"))
+
+dt_for_sm$origin<- ifelse(dt_for_sm$CTR=="DE","Germany","Not Germany") 
+
+dt_for_sm$DE <- factor(dt_for_sm$DE,
+levels = c(0,1),
+labels = c("Not In Germany", "Germany"))
+
+dt_for_sm$BUNDESLAND <- factor(dt_for_sm$BUNDESLAND,
+levels = c("BW","BY","BE","BB","HB","HH","HE","NI",
+           "MV","NW","RP","SL","SN","ST","SH","TH"),
+labels = c("Baden-Württemberg",
+           "Bayern",
+           "Berlin",
+           "Brandenburg",
+           "Bremen",
+           "Hamburg",
+           "Hessen", 
+           "Niedersachsen", 
+           "Mecklenburg-Vorpommern", 
+           "Nordrhein-Westfalen", 
+           "Rheinland-Pfalz", 
+           "Saarland", 
+           "Sachsen", 
+           "Sachsen-Anhalt", 
+           "Schleswig-Holstein", 
+           "Thüringen"))
+
+dt_for_sm$BER <- factor(dt_for_sm$BER,
+levels = c(1,2,3,4,5,6,7,8,9,10,11,12),
+labels = c("Mitte",
+           "Friedrichshain-Kreuzberg", 
+           "Neukölln", 
+           "Charlottenburg-Wilmersdorf", 
+           "Spandau", 
+           "Steglitz-Zehlendorf", 
+           "Tempelhof-Schöneberg", 
+           "Reinickendorf", 
+           "Pankow", 
+           "Marzahn-Hellersdorf", 
+           "Lichtenberg", 
+           "Treptow-Köpenick"))
+
+dt_for_sm$JOBSTATUS <- factor(dt_for_sm$JOBSTATUS,
+ levels = c(1,2,3,4,5,6,7,8),
+ labels = c("Paid work", 
+            "School/training",
+            "Unemployed and actively looking for a job",
+            "Unemployed, wanting a job but not actively looking",
+            "Chronically ill or disabled",
+            "Pre-retired/retired/early retired/retired",
+            "Voluntary military service/federal voluntary service/FSJ/FÖJ",
+            "Housework, caring for children or other people"))
+
+dt_for_sm$EDU <- factor(dt_for_sm$EDU,
+ levels = c(1,2,3,4,5),
+ labels = c("No formal education",
+            "Elementary school",
+            "Further school/secondary school",
+            "University education (e.g. Bachelor, Master)",
+            "Graduate studies (e.g. doctorate, medical doctorate"))
+
+dt_for_sm$PRTALSTATUS <- factor(dt_for_sm$PRTALSTATUS,
+ levels = c(1,2,3),
+ labels = c("Yes",
+            "No",
+            "Not applicable"))
+
+dt_for_sm$PLT <- factor(dt_for_sm$PLT,
+levels = c(1,2,3,4,5,6,7,8,9,10),
+labels = c("CDU/CSU",
+           "SPD", 
+           "Buendnis 90/Gruene", 
+           "Die Linke", 
+           "FDP",
+           "NPD/Republikaner/Die Rechte", 
+           "AfD",
+           "Others", 
+           "Did not vote", 
+           "Not qualified to vote"))
+
+
+```
+
+```{r}
+
+# recode PLT into AfD/non-AfD;recode age into 50/over 50
+
+dt_for_sm <- dt_for_sm %>%
+  mutate(AfD=case_when(
+    PLT=="AfD" ~ "AfD",
+    PLT=="Did not vote"|PLT=="Not qualified to vote" ~ "Not Vote or Not Qualified" ,
+    .default = "Non-AfD",
+  ))
+
+
+dt_for_sm <- dt_for_sm %>%
+  mutate(AGE_50=case_when(
+    AGE_2=="18-29"|AGE_2=="30-39"|AGE_2=="40-49" ~ "18-49",
+    AGE_2=="50-59"|AGE_2=="60-64" ~ "50-64" ,
+  ))
+
+```
+
+```{r, echo=FALSE}
+# only 4 of 5 outcomes reversed 
+dt_for_sm <-dt_for_sm%>%
+  mutate_at(c("ATTITUDES", "PCPJOBNHB", "PCPCULNHB","PCPSAFENHB"), 
+            .funs = list(
+              ~case_when( 
+                .==1 ~ 5,
+                .==2 ~ 4,
+                .==3 ~ 3,
+                .==4 ~ 2,
+                .==5 ~ 1,
+                .==6 ~ 0
+                )
+              ))
+
+```
+
+```{r, echo=FALSE}
+# not reversed 
+dt_for_sm <-dt_for_sm%>%
+  mutate_at("PCPMATENHB", 
+            .funs = list(
+              ~case_when( 
+                .==1 ~ 0,
+                .==2 ~ 1,
+                .==3 ~ 2,
+                .==4 ~ 3,
+                .==5 ~ 4,
+                .==6 ~ 5
+                )
+              ))
+
+```
+
+```{r}
+# rename outcomes
+dt_for_sm<-dt_for_sm %>% 
+  rename ("non_accept"="ATTITUDES",
+          "threat_job"="PCPJOBNHB", 
+          "threat_mate"="PCPMATENHB", 
+          "threat_culture"="PCPCULNHB",
+          "threat_safety"="PCPSAFENHB")
+
+
+```
+
+
+### The interplay with scenarios and gender
+#### All groups 
+
+```{r}
+Non_accept_sex <- dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=weighted.mean(non_accept, psweight),
+            sd=sqrt(wtd.var(non_accept, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Non-Acceptance")
+
+Job_com_sex <- dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=weighted.mean(threat_job, psweight),
+            sd=sqrt(wtd.var(threat_job, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Job Competition")
+
+
+Mate_com_sex <- dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=weighted.mean(threat_mate, psweight),
+            sd=sqrt(wtd.var(threat_mate, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Mate Competition")
+
+
+Cul_thr_sex <- dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=weighted.mean(threat_culture, psweight),
+            sd=sqrt(wtd.var(threat_culture, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to German Culture")
+
+
+Safe_con_sex <- dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=weighted.mean(threat_safety, psweight),
+            sd=sqrt(wtd.var(threat_safety, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Safety")
+
+
+Thr_sex <- rbind(Non_accept_sex, Job_com_sex, Mate_com_sex, Cul_thr_sex, Safe_con_sex)
+
+
+```
+
+
+### Non-Acceptance
+##### Unweighted pairwise p value
+```{r}
+
+non_accept_sex_t_test <-dt_for_sm %>% group_by(SEX)%>%
+  pairwise_t_test(non_accept~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+non_accept_sex_t_test <- non_accept_sex_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+non_accept_sex_t_test <- non_accept_sex_t_test %>% 
+  filter(xmin==1&xmax==2&SEX=="Male"|xmin==1&xmax==2&SEX=="Female"|xmin==2&xmax==3&SEX=="Male"|xmin==2&xmax==3&SEX=="Female"|
+           xmin==1&xmax==3&SEX=="Male"|xmin==1&xmax==3&SEX=="Female"|xmin==3&xmax==4&SEX=="Male"|xmin==3&xmax==4&SEX=="Female"|
+           xmin==1&xmax==5&SEX=="Male"|xmin==1&xmax==5&SEX=="Female"|xmin==2&xmax==6&SEX=="Male"|xmin==2&xmax==6&SEX=="Female"|
+           xmin==3&xmax==7&SEX=="Male"|xmin==3&xmax==7&SEX=="Female")
+
+```
+
+
+
+###### Weighted p value, combined into unweighted dataframe
+
+```{r}
+# data split into  male and female
+
+data_male <-dt_for_sm %>% filter(SEX=="Male")
+data_female <-dt_for_sm %>% filter(SEX=="Female")
+
+
+# Function of weighted t-test for a pair of scenarios
+perform_weighted_t_test <- function(data, scenario1, scenario2, psweight) {
+  filtered_data <- data %>%
+    filter(scenario %in% c(scenario1, scenario2))
+  survey_design <- svydesign(ids = ~1, weights = psweight, data = filtered_data)
+  weighted_t_test_result <- svyttest(non_accept ~ scenario, design = survey_design)
+  return(weighted_t_test_result$p.value)
+}
+
+# Paired scenarios
+scenario_pairs <- list(
+  c("brown_male_0", "brown_male_50"),
+  c("brown_male_0", "brown_male_100"),
+  c("brown_male_0", "German_male_0"),
+  c("brown_male_50", "brown_male_100"),
+  c("brown_male_50", "German_male_50"),
+  c("brown_male_100", "white_male_100"),
+  c("brown_male_100", "German_male_100")
+)
+
+# Perform weighted t-test for each pair of scenarios
+p_weighted_male <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_male, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_male<- as.data.frame(p_weighted_male)
+
+p_weighted_female <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_female, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_female<- as.data.frame(p_weighted_female)
+colnames(p_weighted_male)= colnames(p_weighted_female)
+p_weighted <- bind_rows(p_weighted_male, p_weighted_female)
+
+colnames(p_weighted) <- "p_weighted"
+
+# Combine results
+non_accept_sex_t_test <- cbind(non_accept_sex_t_test, p_weighted)
+
+# Remove objects
+rm(scenario_pairs, p_weighted_male, p_weighted_female, p_weighted)
+
+
+non_accept_sex_t_test <- non_accept_sex_t_test %>% 
+  mutate(signif_weighted = case_when(
+    p_weighted < 0.001 ~ "***",
+    p_weighted < 0.01 ~ "**",
+    p_weighted < 0.05 ~ "*",
+    p_weighted < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+```
+
+
+
+```{r}
+
+# Recode the values based on the SEX variable
+non_accept_sex_t_test$xmin <- ifelse(non_accept_sex_t_test$SEX == "Male", non_accept_sex_t_test$xmin - 0.25, non_accept_sex_t_test$xmin + 0.25)
+non_accept_sex_t_test$xmax <- ifelse(non_accept_sex_t_test$SEX == "Male", non_accept_sex_t_test$xmax - 0.25, non_accept_sex_t_test$xmax + 0.25)
+
+```
+
+
+```{r}
+
+plot_non_accept_sex <- Non_accept_sex  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=SEX), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=SEX), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=SEX ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Non-Acceptance")+
+  xlab(NULL)+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0, 5.5))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%",
+                              "German_male_0" = "German\nMale 0%", "German_male_50" = "German\nMale 50%",
+                              "German_male_100" = "German\nMale 100%"))+
+  scale_fill_manual(values = c("#4D4D4D","#CCCCCC"))
+
+```
+
+```{r}
+
+# ggsave(filename = "U:/sex_ratio/output/Figure_S12.tiff", plot_non_accept_sex, width = 16, height = 10, dpi=300, units = "cm")
+
+```
+
+
+```{r, fig.height=6, fig.width=8}
+
+# plot_non_accept_sex <-plot_non_accept_sex + stat_pvalue_manual(non_accept_sex_t_test, 
+#                                                               label = "signif_weighted",y.position = c(5, 5.6, 6.2, 5, 6.7, 5, 7.2,
+#                                                                                                        5.3, 5.9, 6.5, 5.3, 7.0, 5.3, 7.4),
+#                                                               bracket.shorten = 0.03)
+
+# plot_non_accept_sex
+
+```
+
+### Perceived Threats
+#### Job competition
+##### Unweighted pairwise p value
+```{r}
+
+threat_job_sex_t_test <-dt_for_sm %>% group_by(SEX)%>%
+  pairwise_t_test(threat_job~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_job_sex_t_test <- threat_job_sex_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_job_sex_t_test <- threat_job_sex_t_test %>% 
+  filter(xmin==1&xmax==2&SEX=="Male"|xmin==1&xmax==2&SEX=="Female"|xmin==2&xmax==3&SEX=="Male"|xmin==2&xmax==3&SEX=="Female"|
+           xmin==1&xmax==3&SEX=="Male"|xmin==1&xmax==3&SEX=="Female"|xmin==3&xmax==4&SEX=="Male"|xmin==3&xmax==4&SEX=="Female"|
+           xmin==1&xmax==5&SEX=="Male"|xmin==1&xmax==5&SEX=="Female"|xmin==2&xmax==6&SEX=="Male"|xmin==2&xmax==6&SEX=="Female"|
+           xmin==3&xmax==7&SEX=="Male"|xmin==3&xmax==7&SEX=="Female")
+
+```
+
+
+
+###### Weighted p value, combined into unweighted dataframe
+
+```{r}
+# data split into  male and female
+
+data_male <-dt_for_sm %>% filter(SEX=="Male")
+data_female <-dt_for_sm %>% filter(SEX=="Female")
+
+
+# Function of weighted t-test for a pair of scenarios
+perform_weighted_t_test <- function(data, scenario1, scenario2, psweight) {
+  filtered_data <- data %>%
+    filter(scenario %in% c(scenario1, scenario2))
+  survey_design <- svydesign(ids = ~1, weights = psweight, data = filtered_data)
+  weighted_t_test_result <- svyttest(threat_job ~ scenario, design = survey_design)
+  return(weighted_t_test_result$p.value)
+}
+
+# Paired scenarios
+scenario_pairs <- list(
+  c("brown_male_0", "brown_male_50"),
+  c("brown_male_0", "brown_male_100"),
+  c("brown_male_0", "German_male_0"),
+  c("brown_male_50", "brown_male_100"),
+  c("brown_male_50", "German_male_50"),
+  c("brown_male_100", "white_male_100"),
+  c("brown_male_100", "German_male_100")
+)
+
+# Perform weighted t-test for each pair of scenarios
+p_weighted_male <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_male, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_male<- as.data.frame(p_weighted_male)
+
+p_weighted_female <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_female, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_female<- as.data.frame(p_weighted_female)
+colnames(p_weighted_male)= colnames(p_weighted_female)
+p_weighted <- bind_rows(p_weighted_male, p_weighted_female)
+
+colnames(p_weighted) <- "p_weighted"
+
+# Combine results
+threat_job_sex_t_test <- cbind(threat_job_sex_t_test, p_weighted)
+
+# Remove objects
+rm(scenario_pairs, p_weighted_male, p_weighted_female, p_weighted)
+
+
+threat_job_sex_t_test <- threat_job_sex_t_test %>% 
+  mutate(signif_weighted = case_when(
+    p_weighted < 0.001 ~ "***",
+    p_weighted < 0.01 ~ "**",
+    p_weighted < 0.05 ~ "*",
+    p_weighted < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+```
+
+
+
+```{r}
+
+# Recode the values based on the SEX variable
+threat_job_sex_t_test$xmin <- ifelse(threat_job_sex_t_test$SEX == "Male", threat_job_sex_t_test$xmin - 0.25, threat_job_sex_t_test$xmin + 0.25)
+threat_job_sex_t_test$xmax <- ifelse(threat_job_sex_t_test$SEX == "Male", threat_job_sex_t_test$xmax - 0.25, threat_job_sex_t_test$xmax + 0.25)
+
+```
+
+
+```{r}
+
+
+plot_threat_job_sex <- Job_com_sex %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=SEX), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=SEX), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=SEX ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Job competition")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0, 5.5))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%",
+                              "German_male_0" = "German\nMale 0%", "German_male_50" = "German\nMale 50%",
+                              "German_male_100" = "German\nMale 100%"))+
+  scale_fill_manual(values = c("#4D4D4D","#CCCCCC"))
+
+```
+
+
+```{r}
+
+# ggsave(filename = "U:/sex_ratio/output/Figure_S13.1.tiff", plot_threat_job_sex, width = 16, height = 10, dpi=300, units = "cm")
+
+```
+
+```{r, fig.height=6, fig.width=8}
+
+#plot_threat_job_sex <-plot_threat_job_sex + stat_pvalue_manual(threat_job_sex_t_test, 
+#                                                               label = "signif_weighted",y.position = c(5, 5.6, 6.2, 5, 6.7, 5, 7.2,
+#                                                                                                        5.3, 5.9, 6.5, 5.3, 7.0, 5.3, 7.4),
+#                                                               bracket.shorten = 0.03)
+
+# plot_threat_job_sex
+
+```
+
+#### Mate competition
+##### Unweighted pairwise p value
+```{r}
+
+threat_mate_sex_t_test <-dt_for_sm %>% group_by(SEX)%>%
+  pairwise_t_test(threat_mate~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_mate_sex_t_test <- threat_mate_sex_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_mate_sex_t_test <- threat_mate_sex_t_test %>% 
+  filter(xmin==1&xmax==2&SEX=="Male"|xmin==1&xmax==2&SEX=="Female"|xmin==2&xmax==3&SEX=="Male"|xmin==2&xmax==3&SEX=="Female"|
+           xmin==1&xmax==3&SEX=="Male"|xmin==1&xmax==3&SEX=="Female"|xmin==3&xmax==4&SEX=="Male"|xmin==3&xmax==4&SEX=="Female"|
+           xmin==1&xmax==5&SEX=="Male"|xmin==1&xmax==5&SEX=="Female"|xmin==2&xmax==6&SEX=="Male"|xmin==2&xmax==6&SEX=="Female"|
+           xmin==3&xmax==7&SEX=="Male"|xmin==3&xmax==7&SEX=="Female")
+
+```
+
+
+
+###### Weighted p value, combined into unweighted dataframe
+
+```{r}
+# data split into  male and female
+
+data_male <-dt_for_sm %>% filter(SEX=="Male")
+data_female <-dt_for_sm %>% filter(SEX=="Female")
+
+
+# Function of weighted t-test for a pair of scenarios
+perform_weighted_t_test <- function(data, scenario1, scenario2, psweight) {
+  filtered_data <- data %>%
+    filter(scenario %in% c(scenario1, scenario2))
+  survey_design <- svydesign(ids = ~1, weights = psweight, data = filtered_data)
+  weighted_t_test_result <- svyttest(threat_mate ~ scenario, design = survey_design)
+  return(weighted_t_test_result$p.value)
+}
+
+# Paired scenarios
+scenario_pairs <- list(
+  c("brown_male_0", "brown_male_50"),
+  c("brown_male_0", "brown_male_100"),
+  c("brown_male_0", "German_male_0"),
+  c("brown_male_50", "brown_male_100"),
+  c("brown_male_50", "German_male_50"),
+  c("brown_male_100", "white_male_100"),
+  c("brown_male_100", "German_male_100")
+)
+
+# Perform weighted t-test for each pair of scenarios
+p_weighted_male <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_male, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_male<- as.data.frame(p_weighted_male)
+
+p_weighted_female <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_female, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_female<- as.data.frame(p_weighted_female)
+colnames(p_weighted_male)= colnames(p_weighted_female)
+p_weighted <- bind_rows(p_weighted_male, p_weighted_female)
+
+colnames(p_weighted) <- "p_weighted"
+
+# Combine results
+threat_mate_sex_t_test <- cbind(threat_mate_sex_t_test, p_weighted)
+
+# Remove objects
+rm(scenario_pairs, p_weighted_male, p_weighted_female, p_weighted)
+
+
+threat_mate_sex_t_test <- threat_mate_sex_t_test %>% 
+  mutate(signif_weighted = case_when(
+    p_weighted < 0.001 ~ "***",
+    p_weighted < 0.01 ~ "**",
+    p_weighted < 0.05 ~ "*",
+    p_weighted < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+```
+
+
+```{r}
+
+# Recode the values based on the SEX variable
+threat_mate_sex_t_test$xmin <- ifelse(threat_mate_sex_t_test$SEX == "Male", threat_mate_sex_t_test$xmin - 0.25, threat_mate_sex_t_test$xmin + 0.25)
+threat_mate_sex_t_test$xmax <- ifelse(threat_mate_sex_t_test$SEX == "Male", threat_mate_sex_t_test$xmax - 0.25, threat_mate_sex_t_test$xmax + 0.25)
+
+```
+
+
+```{r}
+
+
+plot_threat_mate_sex <- Mate_com_sex  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=SEX), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=SEX), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=SEX ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Mate competition")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,5.5))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%",
+                              "German_male_0" = "German\nMale 0%", "German_male_50" = "German\nMale 50%",
+                              "German_male_100" = "German\nMale 100%"))+
+  scale_fill_manual(values = c("#4D4D4D","#CCCCCC"))
+
+```
+
+```{r}
+
+ ggsave(filename = "U:/sex_ratio/output/Figure_S13.2.tiff", plot_threat_mate_sex, width = 16, height = 10, dpi=300, units = "cm")
+
+```
+
+```{r, fig.height=6, fig.width=8}
+
+#plot_threat_mate_sex <-plot_threat_mate_sex + stat_pvalue_manual(threat_mate_sex_t_test, 
+#                                                               label = "signif_weighted",y.position = c(5, 5.6, 6.2, 5, 6.7, 5, 7.2,
+#                                                                                                        5.3, 5.9, 6.5, 5.3, 7.0, 5.3, 7.4),
+#                                                               bracket.shorten = 0.03)
+
+# plot_threat_mate_sex
+
+```
+
+#### Safety
+##### Unweighted pairwise p value
+```{r}
+
+threat_safe_sex_t_test <-dt_for_sm %>% group_by(SEX)%>%
+  pairwise_t_test(threat_safety~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_safe_sex_t_test <- threat_safe_sex_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_safe_sex_t_test <- threat_safe_sex_t_test %>% 
+  filter(xmin==1&xmax==2&SEX=="Male"|xmin==1&xmax==2&SEX=="Female"|xmin==2&xmax==3&SEX=="Male"|xmin==2&xmax==3&SEX=="Female"|
+           xmin==1&xmax==3&SEX=="Male"|xmin==1&xmax==3&SEX=="Female"|xmin==3&xmax==4&SEX=="Male"|xmin==3&xmax==4&SEX=="Female"|
+           xmin==1&xmax==5&SEX=="Male"|xmin==1&xmax==5&SEX=="Female"|xmin==2&xmax==6&SEX=="Male"|xmin==2&xmax==6&SEX=="Female"|
+           xmin==3&xmax==7&SEX=="Male"|xmin==3&xmax==7&SEX=="Female")
+
+```
+
+
+
+###### Weighted p value, combined into unweighted dataframe
+
+```{r}
+# data split into  male and female
+
+data_male <-dt_for_sm %>% filter(SEX=="Male")
+data_female <-dt_for_sm %>% filter(SEX=="Female")
+
+
+# Function of weighted t-test for a pair of scenarios
+perform_weighted_t_test <- function(data, scenario1, scenario2, psweight) {
+  filtered_data <- data %>%
+    filter(scenario %in% c(scenario1, scenario2))
+  survey_design <- svydesign(ids = ~1, weights = psweight, data = filtered_data)
+  weighted_t_test_result <- svyttest(threat_safety ~ scenario, design = survey_design)
+  return(weighted_t_test_result$p.value)
+}
+
+# Paired scenarios
+scenario_pairs <- list(
+  c("brown_male_0", "brown_male_50"),
+  c("brown_male_0", "brown_male_100"),
+  c("brown_male_0", "German_male_0"),
+  c("brown_male_50", "brown_male_100"),
+  c("brown_male_50", "German_male_50"),
+  c("brown_male_100", "white_male_100"),
+  c("brown_male_100", "German_male_100")
+)
+
+# Perform weighted t-test for each pair of scenarios
+p_weighted_male <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_male, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_male<- as.data.frame(p_weighted_male)
+
+p_weighted_female <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_female, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_female<- as.data.frame(p_weighted_female)
+colnames(p_weighted_male)= colnames(p_weighted_female)
+p_weighted <- bind_rows(p_weighted_male, p_weighted_female)
+
+colnames(p_weighted) <- "p_weighted"
+
+# Combine results
+threat_safe_sex_t_test <- cbind(threat_safe_sex_t_test, p_weighted)
+
+# Remove objects
+rm(scenario_pairs, p_weighted_male, p_weighted_female, p_weighted)
+
+
+threat_safe_sex_t_test <- threat_safe_sex_t_test %>% 
+  mutate(signif_weighted = case_when(
+    p_weighted < 0.001 ~ "***",
+    p_weighted < 0.01 ~ "**",
+    p_weighted < 0.05 ~ "*",
+    p_weighted < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+```
+
+
+
+```{r}
+
+# Recode the values based on the SEX variable
+threat_safe_sex_t_test$xmin <- ifelse(threat_safe_sex_t_test$SEX == "Male", threat_safe_sex_t_test$xmin - 0.25, threat_safe_sex_t_test$xmin + 0.25)
+threat_safe_sex_t_test$xmax <- ifelse(threat_safe_sex_t_test$SEX == "Male", threat_safe_sex_t_test$xmax - 0.25, threat_safe_sex_t_test$xmax + 0.25)
+
+```
+
+
+```{r}
+
+
+plot_threat_safe_sex <- Safe_con_sex  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=SEX), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=SEX), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=SEX ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Safety")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,5.5))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%",
+                              "German_male_0" = "German\nMale 0%", "German_male_50" = "German\nMale 50%",
+                              "German_male_100" = "German\nMale 100%"))+
+  scale_fill_manual(values = c("#4D4D4D","#CCCCCC"))
+
+plot_threat_safe_sex
+
+```
+
+```{r}
+
+# ggsave(filename = "U:/sex_ratio/output/Figure_S13.3.tiff", plot_threat_safe_sex, width = 16, height = 10, dpi=300, units = "cm")
+
+```
+
+```{r, fig.height=6, fig.width=8}
+
+# plot_threat_safe_sex <-plot_threat_safe_sex + stat_pvalue_manual(threat_safe_sex_t_test, 
+#                                                               label = "signif_weighted",y.position = c(5, 5.6, 6.2, 5, 6.7, 5, 7.2,
+#                                                                                                        5.3, 5.9, 6.5, 5.3, 7.0, 5.3, 7.4),
+#                                                               bracket.shorten = 0.03)
+
+# plot_threat_safe_sex
+
+```
+
+> Threats to German culture is not asked to German influx groups, Figure 4 in the main text has shown the all groups
+
+
+
+
+
+
+
+

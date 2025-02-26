@@ -1,0 +1,1960 @@
+---
+title: "sex_ratio_w1_w2_analysis_supplementary_material_C"
+author: "Chia-Jung Tsai"
+date: "2023-11-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(stringr)
+library(RColorBrewer)
+library(ggpubr)
+library(Hmisc)
+library(effsize)
+library(stringr)
+library(gt)
+library(data.table)
+library(rstatix) #Pairwise t test
+library(survey) #Weighted tests
+
+```
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+
+dt_for_sm <- readr::read_csv("Data/ATRP_imputed_pswt_v2.csv") # the data set with the bigger sale of weight on AGE (=AGE_2)
+dt_for_sm <- subset(dt_for_sm, select = -c(...1)) # delete the weird column of "...1" from csv format
+
+```
+
+```{r}
+dt_for_sm$scenario <- factor(dt_for_sm$equation,
+levels = c(1,2,3,4,5,6,7),
+labels = c("brown_male_0", "brown_male_50", "brown_male_100", "white_male_100", "German_male_0", "German_male_50", "German_male_100"))
+
+dt_for_sm$CONT <- factor(dt_for_sm$CONT,
+levels = c(0,1,2,3),
+labels = c("Never", " Once", "A few times","Several times"))
+
+dt_for_sm$REFDE <- factor(dt_for_sm$REFDE,
+levels = c(1,2,3,4),
+labels = c("lower than 1%", "1.5%", "3%","higher than 5%"))
+
+dt_for_sm$REFSTA <- factor(dt_for_sm$REFSTA,
+levels = c(1,2,3,4),
+labels = c("lower than 1%", "1.5%", "3%","higher than 5%"))
+
+dt_for_sm$REFNHB <- factor(dt_for_sm$REFNHB,
+levels = c(1,2,3,4),
+labels = c("lower than 1%", "1.5%", "3%","higher than 5%"))
+
+dt_for_sm$SEXDE <- factor(dt_for_sm$SEXDE,
+levels = c(1,2,3,4,5),
+labels = c("women>>men", "women>men", "women=men","women<men","women<<men"))
+
+dt_for_sm$SEXSTA <- factor(dt_for_sm$SEXSTA,
+levels = c(1,2,3,4,5),
+labels = c("women>>men", "women>men", "women=men","women<men","women<<men"))
+
+dt_for_sm$SEXNHB <- factor(dt_for_sm$SEXNHB,
+levels = c(1,2,3,4,5),
+labels = c("women>>men", "women>men", "women=men","women<men","women<<men"))
+
+dt_for_sm$AGE <- factor(dt_for_sm$AGE,
+levels = c(1,2,3,4,5,6,7,8,9,10),
+labels = c("18-24", "25-29", "30-34","35-39","40-44","45-49","50-54","55-59","60-64","Over65"))
+
+
+dt_for_sm$AGE_2 <- factor(dt_for_sm$AGE_2,
+levels = c(1,2,3,4,5),
+labels = c("18-29", "30-39","40-49","50-59","60-64"))
+
+
+dt_for_sm$SEX <- factor(dt_for_sm$SEX,
+levels = c(0,1,2),
+labels = c("Male", "Female", "Diverse"))
+
+dt_for_sm$origin<- ifelse(dt_for_sm$CTR=="DE","Germany","Not Germany") 
+
+dt_for_sm$DE <- factor(dt_for_sm$DE,
+levels = c(0,1),
+labels = c("Not In Germany", "Germany"))
+
+dt_for_sm$BUNDESLAND <- factor(dt_for_sm$BUNDESLAND,
+levels = c("BW","BY","BE","BB","HB","HH","HE","NI",
+           "MV","NW","RP","SL","SN","ST","SH","TH"),
+labels = c("Baden-Württemberg",
+           "Bayern",
+           "Berlin",
+           "Brandenburg",
+           "Bremen",
+           "Hamburg",
+           "Hessen", 
+           "Niedersachsen", 
+           "Mecklenburg-Vorpommern", 
+           "Nordrhein-Westfalen", 
+           "Rheinland-Pfalz", 
+           "Saarland", 
+           "Sachsen", 
+           "Sachsen-Anhalt", 
+           "Schleswig-Holstein", 
+           "Thüringen"))
+
+dt_for_sm$BER <- factor(dt_for_sm$BER,
+levels = c(1,2,3,4,5,6,7,8,9,10,11,12),
+labels = c("Mitte",
+           "Friedrichshain-Kreuzberg", 
+           "Neukölln", 
+           "Charlottenburg-Wilmersdorf", 
+           "Spandau", 
+           "Steglitz-Zehlendorf", 
+           "Tempelhof-Schöneberg", 
+           "Reinickendorf", 
+           "Pankow", 
+           "Marzahn-Hellersdorf", 
+           "Lichtenberg", 
+           "Treptow-Köpenick"))
+
+dt_for_sm$JOBSTATUS <- factor(dt_for_sm$JOBSTATUS,
+ levels = c(1,2,3,4,5,6,7,8),
+ labels = c("Paid work", 
+            "School/training",
+            "Unemployed and actively looking for a job",
+            "Unemployed, wanting a job but not actively looking",
+            "Chronically ill or disabled",
+            "Pre-retired/retired/early retired/retired",
+            "Voluntary military service/federal voluntary service/FSJ/FÖJ",
+            "Housework, caring for children or other people"))
+
+dt_for_sm$EDU <- factor(dt_for_sm$EDU,
+ levels = c(1,2,3,4,5),
+ labels = c("No formal education",
+            "Elementary school",
+            "Further school/secondary school",
+            "University education (e.g. Bachelor, Master)",
+            "Graduate studies (e.g. doctorate, medical doctorate"))
+
+dt_for_sm$PRTALSTATUS <- factor(dt_for_sm$PRTALSTATUS,
+ levels = c(1,2,3),
+ labels = c("Yes",
+            "No",
+            "Not applicable"))
+
+dt_for_sm$PLT <- factor(dt_for_sm$PLT,
+levels = c(1,2,3,4,5,6,7,8,9,10),
+labels = c("CDU/CSU",
+           "SPD", 
+           "Buendnis 90/Gruene", 
+           "Die Linke", 
+           "FDP",
+           "NPD/Republikaner/Die Rechte", 
+           "AfD",
+           "Others", 
+           "Did not vote", 
+           "Not qualified to vote"))
+
+
+```
+
+```{r}
+
+# recode PLT into AfD/non-AfD;recode age into 50/over 50
+
+dt_for_sm <- dt_for_sm %>%
+  mutate(AfD=case_when(
+    PLT=="AfD" ~ "AfD",
+    PLT=="Did not vote"|PLT=="Not qualified to vote" ~ "Not Vote or Not Qualified" ,
+    .default = "Non-AfD",
+  ))
+
+
+dt_for_sm <- dt_for_sm %>%
+  mutate(AGE_50=case_when(
+    AGE_2=="18-29"|AGE_2=="30-39"|AGE_2=="40-49" ~ "18-49",
+    AGE_2=="50-59"|AGE_2=="60-64" ~ "50-64" ,
+  ))
+
+```
+
+```{r, echo=FALSE}
+# only 4 of 5 outcomes reversed 
+dt_for_sm <-dt_for_sm%>%
+  mutate_at(c("ATTITUDES", "PCPJOBNHB", "PCPCULNHB","PCPSAFENHB"), 
+            .funs = list(
+              ~case_when( 
+                .==1 ~ 5,
+                .==2 ~ 4,
+                .==3 ~ 3,
+                .==4 ~ 2,
+                .==5 ~ 1,
+                .==6 ~ 0
+                )
+              ))
+
+```
+
+```{r, echo=FALSE}
+# not reversed 
+dt_for_sm <-dt_for_sm%>%
+  mutate_at("PCPMATENHB", 
+            .funs = list(
+              ~case_when( 
+                .==1 ~ 0,
+                .==2 ~ 1,
+                .==3 ~ 2,
+                .==4 ~ 3,
+                .==5 ~ 4,
+                .==6 ~ 5
+                )
+              ))
+
+```
+
+```{r}
+# rename outcomes
+dt_for_sm<-dt_for_sm %>% 
+  rename ("non_accept"="ATTITUDES",
+          "threat_job"="PCPJOBNHB", 
+          "threat_mate"="PCPMATENHB", 
+          "threat_culture"="PCPCULNHB",
+          "threat_safety"="PCPSAFENHB")
+
+
+```
+
+
+## C subgroup analysis
+
+### The interplay with scenarios and age
+#### by Age 18-49/ over50
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+Non_accept_age <- dt_for_sm %>% 
+  group_by(scenario, AGE_50)%>%
+  summarise(mean=weighted.mean(non_accept, psweight),
+            sd=sqrt(wtd.var(non_accept, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Non-Acceptance")
+
+Job_com_age <- dt_for_sm %>% 
+  group_by(scenario, AGE_50)%>%
+  summarise(mean=weighted.mean(threat_job, psweight),
+            sd=sqrt(wtd.var(threat_job, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Job Competition")
+
+
+Mate_com_age <- dt_for_sm %>% 
+  group_by(scenario, AGE_50)%>%
+  summarise(mean=weighted.mean(threat_mate, psweight),
+            sd=sqrt(wtd.var(threat_mate, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Mate Competition")
+
+
+Cul_thr_age <- dt_for_sm %>% 
+  group_by(scenario, AGE_50)%>%
+  summarise(mean=weighted.mean(threat_culture, psweight),
+            sd=sqrt(wtd.var(threat_culture, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to German Culture")
+
+
+Safe_thr_age <- dt_for_sm %>% 
+  group_by(scenario, AGE_50)%>%
+  summarise(mean=weighted.mean(threat_safety, psweight),
+            sd=sqrt(wtd.var(threat_safety, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Safety")
+
+```
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+
+Thr_age <- rbind(Non_accept_age, Job_com_age, Mate_com_age, Cul_thr_age, Safe_thr_age)
+names(Thr_age) <- tolower(names(Thr_age))
+
+Thr_age$scenario <- factor(Thr_age$scenario , 
+                       levels = c("brown_male_0", 
+                                  "brown_male_50", 
+                                  "brown_male_100", 
+                                  "white_male_100", 
+                                  "German_male_0", 
+                                  "German_male_50", 
+                                  "German_male_100"), 
+                       labels= c("Non-White Refugee Male 0%",
+                                 "Non-White Refugee Male 50%",
+                                 "Non-White Refugee Male 100%",
+                                 "White Refugee Male 100%",
+                                 "German Male 0%",
+                                 "German Male 50%", 
+                                 "German Male 100%"), ordered = T)
+
+
+Thr_age <- Thr_age[order(Thr_age$threat_type, Thr_age$scenario),]
+
+print(Thr_age, n=30)
+
+mean.tab_age <- gt(data = Thr_age) %>% 
+  tab_header(
+    title = "Weighted Mean Scores by Conditions across Age of Respondants")%>%
+  tab_source_note("confidence Level: 0.95")
+
+mean.tab_age
+
+
+```
+
+
+### Non-Acceptance
+##### Unweighted pairwise p value
+```{r}
+
+non_accept_age_t_test <-dt_for_sm %>% group_by(AGE_50)%>%
+  pairwise_t_test(non_accept~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+non_accept_age_t_test <- non_accept_age_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+non_accept_age_t_test <- non_accept_age_t_test %>% 
+  filter(xmin==1&xmax==2&AGE_50=="18-49"|xmin==1&xmax==2&AGE_50=="50-64"|xmin==2&xmax==3&AGE_50=="18-49"|xmin==2&xmax==3&AGE_50=="50-64"|
+           xmin==1&xmax==3&AGE_50=="18-49"|xmin==1&xmax==3&AGE_50=="50-64"|xmin==3&xmax==4&AGE_50=="18-49"|xmin==3&xmax==4&AGE_50=="50-64"|
+           xmin==1&xmax==5&AGE_50=="18-49"|xmin==1&xmax==5&AGE_50=="50-64"|xmin==2&xmax==6&AGE_50=="18-49"|xmin==2&xmax==6&AGE_50=="50-64"|
+           xmin==3&xmax==7&AGE_50=="18-49"|xmin==3&xmax==7&AGE_50=="50-64")
+
+```
+
+
+
+###### Weighted p value, combined into unweighted dataframe
+
+```{r}
+# data split into  male and female
+
+data_young <-dt_for_sm %>% filter(AGE_50=="18-49")
+data_old <-dt_for_sm %>% filter(AGE_50=="50-64")
+
+
+# Function of weighted t-test for a pair of scenarios
+perform_weighted_t_test <- function(data, scenario1, scenario2, psweight) {
+  filtered_data <- data %>%
+    filter(scenario %in% c(scenario1, scenario2))
+  survey_design <- svydesign(ids = ~1, weights = psweight, data = filtered_data)
+  weighted_t_test_result <- svyttest(non_accept ~ scenario, design = survey_design)
+  return(weighted_t_test_result$p.value)
+}
+
+# Paired scenarios
+scenario_pairs <- list(
+  c("brown_male_0", "brown_male_50"),
+  c("brown_male_0", "brown_male_100"),
+  c("brown_male_0", "German_male_0"),
+  c("brown_male_50", "brown_male_100"),
+  c("brown_male_50", "German_male_50"),
+  c("brown_male_100", "white_male_100"),
+  c("brown_male_100", "German_male_100")
+)
+
+# Perform weighted t-test for each pair of scenarios
+p_weighted_young <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_young, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_young<- as.data.frame(p_weighted_young)
+
+p_weighted_old <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_old, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_old<- as.data.frame(p_weighted_old)
+
+colnames(p_weighted_young)= colnames(p_weighted_old)
+
+p_weighted <- bind_rows(p_weighted_young, p_weighted_old)
+
+colnames(p_weighted) <- "p_weighted"
+
+# Combine results
+non_accept_age_t_test <- cbind(non_accept_age_t_test, p_weighted)
+
+# Remove objects
+rm(scenario_pairs, p_weighted_young, p_weighted_old, p_weighted)
+
+
+non_accept_age_t_test <- non_accept_age_t_test %>% 
+  mutate(signif_weighted = case_when(
+    p_weighted < 0.001 ~ "***",
+    p_weighted < 0.01 ~ "**",
+    p_weighted < 0.05 ~ "*",
+    p_weighted < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+```
+
+
+```{r}
+
+non_accept_age_t_test_f3 <- non_accept_age_t_test %>% 
+  filter(xmin==1&xmax==2&AGE_50=="18-49"|xmin==1&xmax==2&AGE_50=="50-64"|
+           xmin==2&xmax==3&AGE_50=="18-49"|xmin==2&xmax==3&AGE_50=="50-64"|
+           xmin==1&xmax==3&AGE_50=="18-49"|xmin==1&xmax==3&AGE_50=="50-64"|
+           xmin==3&xmax==4&AGE_50=="18-49"|xmin==3&xmax==4&AGE_50=="50-64")
+
+non_accept_age_f3 <- Non_accept_age %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the AGE_50 variable
+non_accept_age_t_test_f3$xmin <- ifelse(non_accept_age_t_test_f3$AGE_50 == "18-49", non_accept_age_t_test_f3$xmin - 0.25, non_accept_age_t_test_f3$xmin + 0.25)
+non_accept_age_t_test_f3$xmax <- ifelse(non_accept_age_t_test_f3$AGE_50 == "18-49", non_accept_age_t_test_f3$xmax - 0.25, non_accept_age_t_test_f3$xmax + 0.25)
+
+```
+
+
+```{r}
+
+
+plot_non_accept_age <- non_accept_age_f3  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=AGE_50), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=AGE_50), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=AGE_50 ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Non-Acceptance")+
+  xlab(NULL)+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.3))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#13BBC3","#801414"))
+
+```
+
+
+
+```{r, fig.height=6, fig.width=8}
+
+plot_non_accept_age <-plot_non_accept_age + stat_pvalue_manual(non_accept_age_t_test_f3, 
+                                                               label = "signif_weighted",y.position = c(5, 5.7, 5, 5, 
+                                                                                                        5.4, 6, 5.4, 5.4),
+                                                               bracket.shorten = 0.03)
+
+plot_non_accept_age
+
+```
+
+
+```{r}
+
+# ggsave(filename = "U:/sex_ratio/output/Figure_S8.tiff", plot_non_accept_age, width = 16, height = 10, dpi=300, units = "cm")
+
+```
+
+
+
+### Perceived Threats
+#### Job competition
+##### Unweighted pairwise p value
+```{r}
+
+threat_job_age_t_test <-dt_for_sm %>% group_by(AGE_50)%>%
+  pairwise_t_test(threat_job~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_job_age_t_test <- threat_job_age_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_job_age_t_test <- threat_job_age_t_test %>% 
+  filter(xmin==1&xmax==2&AGE_50=="18-49"|xmin==1&xmax==2&AGE_50=="50-64"|xmin==2&xmax==3&AGE_50=="18-49"|xmin==2&xmax==3&AGE_50=="50-64"|
+           xmin==1&xmax==3&AGE_50=="18-49"|xmin==1&xmax==3&AGE_50=="50-64"|xmin==3&xmax==4&AGE_50=="18-49"|xmin==3&xmax==4&AGE_50=="50-64"|
+           xmin==1&xmax==5&AGE_50=="18-49"|xmin==1&xmax==5&AGE_50=="50-64"|xmin==2&xmax==6&AGE_50=="18-49"|xmin==2&xmax==6&AGE_50=="50-64"|
+           xmin==3&xmax==7&AGE_50=="18-49"|xmin==3&xmax==7&AGE_50=="50-64")
+
+```
+
+###### Weighted p value, combined into unweighted dataframe
+
+```{r}
+# data split into  male and female
+
+data_young <-dt_for_sm %>% filter(AGE_50=="18-49")
+data_old <-dt_for_sm %>% filter(AGE_50=="50-64")
+
+
+# Function of weighted t-test for a pair of scenarios
+perform_weighted_t_test <- function(data, scenario1, scenario2, psweight) {
+  filtered_data <- data %>%
+    filter(scenario %in% c(scenario1, scenario2))
+  survey_design <- svydesign(ids = ~1, weights = psweight, data = filtered_data)
+  weighted_t_test_result <- svyttest(threat_job ~ scenario, design = survey_design)
+  return(weighted_t_test_result$p.value)
+}
+
+# Paired scenarios
+scenario_pairs <- list(
+  c("brown_male_0", "brown_male_50"),
+  c("brown_male_0", "brown_male_100"),
+  c("brown_male_0", "German_male_0"),
+  c("brown_male_50", "brown_male_100"),
+  c("brown_male_50", "German_male_50"),
+  c("brown_male_100", "white_male_100"),
+  c("brown_male_100", "German_male_100")
+)
+
+# Perform weighted t-test for each pair of scenarios
+p_weighted_young <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_young, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_young<- as.data.frame(p_weighted_young)
+
+p_weighted_old <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_old, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_old<- as.data.frame(p_weighted_old)
+
+colnames(p_weighted_young)= colnames(p_weighted_old)
+
+p_weighted <- bind_rows(p_weighted_young, p_weighted_old)
+
+colnames(p_weighted) <- "p_weighted"
+
+# Combine results
+threat_job_age_t_test <- cbind(threat_job_age_t_test, p_weighted)
+
+# Remove objects
+rm(scenario_pairs, p_weighted_young, p_weighted_old, p_weighted)
+
+
+threat_job_age_t_test <- threat_job_age_t_test %>% 
+  mutate(signif_weighted = case_when(
+    p_weighted < 0.001 ~ "***",
+    p_weighted < 0.01 ~ "**",
+    p_weighted < 0.05 ~ "*",
+    p_weighted < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+```
+
+
+```{r}
+
+threat_job_age_t_test_f4 <- threat_job_age_t_test %>% 
+  filter(xmin==1&xmax==2&AGE_50=="18-49"|xmin==1&xmax==2&AGE_50=="50-64"|
+           xmin==2&xmax==3&AGE_50=="18-49"|xmin==2&xmax==3&AGE_50=="50-64"|
+           xmin==1&xmax==3&AGE_50=="18-49"|xmin==1&xmax==3&AGE_50=="50-64"|
+           xmin==3&xmax==4&AGE_50=="18-49"|xmin==3&xmax==4&AGE_50=="50-64")
+
+threat_job_age_f4 <- Job_com_age %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the AGE_50 variable
+threat_job_age_t_test_f4$xmin <- ifelse(threat_job_age_t_test_f4$AGE_50 == "18-49", threat_job_age_t_test_f4$xmin - 0.25, threat_job_age_t_test_f4$xmin + 0.25)
+threat_job_age_t_test_f4$xmax <- ifelse(threat_job_age_t_test_f4$AGE_50 == "18-49", threat_job_age_t_test_f4$xmax - 0.25, threat_job_age_t_test_f4$xmax + 0.25)
+
+```
+
+
+```{r}
+
+
+plot_threat_job_age <- threat_job_age_f4  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=AGE_50), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=AGE_50), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=AGE_50 ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Job Competition")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.3))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#13BBC3","#801414"))
+
+```
+
+
+
+```{r, fig.height=6, fig.width=8}
+
+plot_threat_job_age <-plot_threat_job_age + stat_pvalue_manual(threat_job_age_t_test_f4, 
+                                                               label = "signif_weighted",y.position = c(5, 5.7, 5, 5, 
+                                                                                                        5.4, 6, 5.4, 5.4),
+                                                               bracket.shorten = 0.03)
+
+plot_threat_job_age
+
+```
+
+#### Mate competition
+##### Unweighted pairwise p value
+```{r}
+
+threat_mate_age_t_test <-dt_for_sm %>% group_by(AGE_50)%>%
+  pairwise_t_test(threat_mate~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_mate_age_t_test <- threat_mate_age_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_mate_age_t_test <- threat_mate_age_t_test %>% 
+  filter(xmin==1&xmax==2&AGE_50=="18-49"|xmin==1&xmax==2&AGE_50=="50-64"|xmin==2&xmax==3&AGE_50=="18-49"|xmin==2&xmax==3&AGE_50=="50-64"|
+           xmin==1&xmax==3&AGE_50=="18-49"|xmin==1&xmax==3&AGE_50=="50-64"|xmin==3&xmax==4&AGE_50=="18-49"|xmin==3&xmax==4&AGE_50=="50-64"|
+           xmin==1&xmax==5&AGE_50=="18-49"|xmin==1&xmax==5&AGE_50=="50-64"|xmin==2&xmax==6&AGE_50=="18-49"|xmin==2&xmax==6&AGE_50=="50-64"|
+           xmin==3&xmax==7&AGE_50=="18-49"|xmin==3&xmax==7&AGE_50=="50-64")
+
+```
+
+###### Weighted p value, combined into unweighted dataframe
+
+```{r}
+# data split into  male and female
+
+data_young <-dt_for_sm %>% filter(AGE_50=="18-49")
+data_old <-dt_for_sm %>% filter(AGE_50=="50-64")
+
+
+# Function of weighted t-test for a pair of scenarios
+perform_weighted_t_test <- function(data, scenario1, scenario2, psweight) {
+  filtered_data <- data %>%
+    filter(scenario %in% c(scenario1, scenario2))
+  survey_design <- svydesign(ids = ~1, weights = psweight, data = filtered_data)
+  weighted_t_test_result <- svyttest(threat_mate ~ scenario, design = survey_design)
+  return(weighted_t_test_result$p.value)
+}
+
+# Paired scenarios
+scenario_pairs <- list(
+  c("brown_male_0", "brown_male_50"),
+  c("brown_male_0", "brown_male_100"),
+  c("brown_male_0", "German_male_0"),
+  c("brown_male_50", "brown_male_100"),
+  c("brown_male_50", "German_male_50"),
+  c("brown_male_100", "white_male_100"),
+  c("brown_male_100", "German_male_100")
+)
+
+# Perform weighted t-test for each pair of scenarios
+p_weighted_young <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_young, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_young<- as.data.frame(p_weighted_young)
+
+p_weighted_old <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_old, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_old<- as.data.frame(p_weighted_old)
+
+colnames(p_weighted_young)= colnames(p_weighted_old)
+
+p_weighted <- bind_rows(p_weighted_young, p_weighted_old)
+
+colnames(p_weighted) <- "p_weighted"
+
+# Combine results
+threat_mate_age_t_test <- cbind(threat_mate_age_t_test, p_weighted)
+
+# Remove objects
+rm(scenario_pairs, p_weighted_young, p_weighted_old, p_weighted)
+
+
+threat_mate_age_t_test <- threat_mate_age_t_test %>% 
+  mutate(signif_weighted = case_when(
+    p_weighted < 0.001 ~ "***",
+    p_weighted < 0.01 ~ "**",
+    p_weighted < 0.05 ~ "*",
+    p_weighted < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+```
+
+
+```{r}
+
+threat_mate_age_t_test_f4 <- threat_mate_age_t_test %>% 
+  filter(xmin==1&xmax==2&AGE_50=="18-49"|xmin==1&xmax==2&AGE_50=="50-64"|
+           xmin==2&xmax==3&AGE_50=="18-49"|xmin==2&xmax==3&AGE_50=="50-64"|
+           xmin==1&xmax==3&AGE_50=="18-49"|xmin==1&xmax==3&AGE_50=="50-64"|
+           xmin==3&xmax==4&AGE_50=="18-49"|xmin==3&xmax==4&AGE_50=="50-64")
+
+threat_mate_age_f4 <- Mate_com_age %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the AGE_50 variable
+threat_mate_age_t_test_f4$xmin <- ifelse(threat_mate_age_t_test_f4$AGE_50 == "18-49", threat_mate_age_t_test_f4$xmin - 0.25, threat_mate_age_t_test_f4$xmin + 0.25)
+threat_mate_age_t_test_f4$xmax <- ifelse(threat_mate_age_t_test_f4$AGE_50 == "18-49", threat_mate_age_t_test_f4$xmax - 0.25, threat_mate_age_t_test_f4$xmax + 0.25)
+
+```
+
+
+```{r}
+
+
+plot_threat_mate_age <- threat_mate_age_f4  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=AGE_50), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=AGE_50), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=AGE_50 ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Mate Competition")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.3))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#13BBC3","#801414"))
+
+```
+
+
+
+```{r, fig.height=6, fig.width=8}
+
+plot_threat_mate_age <-plot_threat_mate_age + stat_pvalue_manual(threat_mate_age_t_test_f4, 
+                                                               label = "signif_weighted",y.position = c(5, 5.7, 5, 5, 
+                                                                                                        5.4, 6, 5.4, 5.4),
+                                                               bracket.shorten = 0.03)
+
+plot_threat_mate_age
+
+```
+
+
+#### Safety
+##### Unweighted pairwise p value
+```{r}
+
+threat_safe_age_t_test <-dt_for_sm %>% group_by(AGE_50)%>%
+  pairwise_t_test(threat_safety~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_safe_age_t_test <- threat_safe_age_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_safe_age_t_test <- threat_safe_age_t_test %>% 
+  filter(xmin==1&xmax==2&AGE_50=="18-49"|xmin==1&xmax==2&AGE_50=="50-64"|xmin==2&xmax==3&AGE_50=="18-49"|xmin==2&xmax==3&AGE_50=="50-64"|
+           xmin==1&xmax==3&AGE_50=="18-49"|xmin==1&xmax==3&AGE_50=="50-64"|xmin==3&xmax==4&AGE_50=="18-49"|xmin==3&xmax==4&AGE_50=="50-64"|
+           xmin==1&xmax==5&AGE_50=="18-49"|xmin==1&xmax==5&AGE_50=="50-64"|xmin==2&xmax==6&AGE_50=="18-49"|xmin==2&xmax==6&AGE_50=="50-64"|
+           xmin==3&xmax==7&AGE_50=="18-49"|xmin==3&xmax==7&AGE_50=="50-64")
+
+```
+
+###### Weighted p value, combined into unweighted dataframe
+
+```{r}
+# data split into  male and female
+
+data_young <-dt_for_sm %>% filter(AGE_50=="18-49")
+data_old <-dt_for_sm %>% filter(AGE_50=="50-64")
+
+
+# Function of weighted t-test for a pair of scenarios
+perform_weighted_t_test <- function(data, scenario1, scenario2, psweight) {
+  filtered_data <- data %>%
+    filter(scenario %in% c(scenario1, scenario2))
+  survey_design <- svydesign(ids = ~1, weights = psweight, data = filtered_data)
+  weighted_t_test_result <- svyttest(threat_safety ~ scenario, design = survey_design)
+  return(weighted_t_test_result$p.value)
+}
+
+# Paired scenarios
+scenario_pairs <- list(
+  c("brown_male_0", "brown_male_50"),
+  c("brown_male_0", "brown_male_100"),
+  c("brown_male_0", "German_male_0"),
+  c("brown_male_50", "brown_male_100"),
+  c("brown_male_50", "German_male_50"),
+  c("brown_male_100", "white_male_100"),
+  c("brown_male_100", "German_male_100")
+)
+
+# Perform weighted t-test for each pair of scenarios
+p_weighted_young <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_young, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_young<- as.data.frame(p_weighted_young)
+
+p_weighted_old <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_old, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_old<- as.data.frame(p_weighted_old)
+
+colnames(p_weighted_young)= colnames(p_weighted_old)
+
+p_weighted <- bind_rows(p_weighted_young, p_weighted_old)
+
+colnames(p_weighted) <- "p_weighted"
+
+# Combine results
+threat_safe_age_t_test <- cbind(threat_safe_age_t_test, p_weighted)
+
+# Remove objects
+rm(scenario_pairs, p_weighted_young, p_weighted_old, p_weighted)
+
+
+threat_safe_age_t_test <- threat_safe_age_t_test %>% 
+  mutate(signif_weighted = case_when(
+    p_weighted < 0.001 ~ "***",
+    p_weighted < 0.01 ~ "**",
+    p_weighted < 0.05 ~ "*",
+    p_weighted < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+```
+
+
+```{r}
+
+threat_safe_age_t_test_f4 <- threat_safe_age_t_test %>% 
+  filter(xmin==1&xmax==2&AGE_50=="18-49"|xmin==1&xmax==2&AGE_50=="50-64"|
+           xmin==2&xmax==3&AGE_50=="18-49"|xmin==2&xmax==3&AGE_50=="50-64"|
+           xmin==1&xmax==3&AGE_50=="18-49"|xmin==1&xmax==3&AGE_50=="50-64"|
+           xmin==3&xmax==4&AGE_50=="18-49"|xmin==3&xmax==4&AGE_50=="50-64")
+
+threat_safe_age_f4 <- Safe_thr_age %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the AGE_50 variable
+threat_safe_age_t_test_f4$xmin <- ifelse(threat_safe_age_t_test_f4$AGE_50 == "18-49", threat_safe_age_t_test_f4$xmin - 0.25, threat_safe_age_t_test_f4$xmin + 0.25)
+threat_safe_age_t_test_f4$xmax <- ifelse(threat_safe_age_t_test_f4$AGE_50 == "18-49", threat_safe_age_t_test_f4$xmax - 0.25, threat_safe_age_t_test_f4$xmax + 0.25)
+
+```
+
+
+```{r}
+
+
+plot_threat_safe_age <- threat_safe_age_f4  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=AGE_50), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=AGE_50), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=AGE_50 ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Safety")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.3))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#13BBC3","#801414"))
+
+```
+
+
+
+```{r, fig.height=6, fig.width=8}
+
+plot_threat_safe_age <-plot_threat_safe_age + stat_pvalue_manual(threat_safe_age_t_test_f4, 
+                                                               label = "signif_weighted",y.position = c(5, 5.7, 5, 5, 
+                                                                                                        5.4, 6, 5.4, 5.4),
+                                                               bracket.shorten = 0.03)
+
+plot_threat_safe_age
+
+```
+
+
+
+#### Culture
+##### Unweighted pairwise p value
+```{r}
+
+dt_cul<- dt_for_sm %>% filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+threat_cul_age_t_test <-dt_cul %>% group_by(AGE_50)%>%
+  pairwise_t_test(threat_culture ~ scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_cul_age_t_test <- threat_cul_age_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_cul_age_t_test <- threat_cul_age_t_test %>% 
+  filter(xmin==1&xmax==2&AGE_50=="18-49"|xmin==1&xmax==2&AGE_50=="50-64"|xmin==2&xmax==3&AGE_50=="18-49"|xmin==2&xmax==3&AGE_50=="50-64"|
+           xmin==1&xmax==3&AGE_50=="18-49"|xmin==1&xmax==3&AGE_50=="50-64"|xmin==3&xmax==4&AGE_50=="18-49"|xmin==3&xmax==4&AGE_50=="50-64"|
+           xmin==1&xmax==5&AGE_50=="18-49"|xmin==1&xmax==5&AGE_50=="50-64"|xmin==2&xmax==6&AGE_50=="18-49"|xmin==2&xmax==6&AGE_50=="50-64"|
+           xmin==3&xmax==7&AGE_50=="18-49"|xmin==3&xmax==7&AGE_50=="50-64")
+
+```
+
+###### Weighted p value, combined into unweighted dataframe
+
+```{r}
+# data split into  18-49 and over 50
+
+data_young <-dt_cul %>% filter(AGE_50=="18-49")
+data_old <-dt_cul %>% filter(AGE_50=="50-64")
+
+
+# Function of weighted t-test for a pair of scenarios
+perform_weighted_t_test <- function(data, scenario1, scenario2, psweight) {
+  filtered_data <- data %>%
+    filter(scenario %in% c(scenario1, scenario2))
+  survey_design <- svydesign(ids = ~1, weights = psweight, data = filtered_data)
+  weighted_t_test_result <- svyttest(threat_culture ~ scenario, design = survey_design)
+  return(weighted_t_test_result$p.value)
+}
+
+# Paired scenarios
+scenario_pairs <- list(
+  c("brown_male_0", "brown_male_50"),
+  c("brown_male_0", "brown_male_100"),
+  c("brown_male_50", "brown_male_100"),
+  c("brown_male_100", "white_male_100")
+)
+
+# Perform weighted t-test for each pair of scenarios
+p_weighted_young <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_young, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_young<- as.data.frame(p_weighted_young)
+
+p_weighted_old <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_old, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_old<- as.data.frame(p_weighted_old)
+
+colnames(p_weighted_young)= colnames(p_weighted_old)
+
+p_weighted <- bind_rows(p_weighted_young, p_weighted_old)
+
+colnames(p_weighted) <- "p_weighted"
+
+# Combine results
+threat_cul_age_t_test <- cbind(threat_cul_age_t_test, p_weighted)
+
+# Remove objects
+rm(scenario_pairs, p_weighted_young, p_weighted_old, p_weighted)
+
+
+threat_cul_age_t_test <- threat_cul_age_t_test %>% 
+  mutate(signif_weighted = case_when(
+    p_weighted < 0.001 ~ "***",
+    p_weighted < 0.01 ~ "**",
+    p_weighted < 0.05 ~ "*",
+    p_weighted < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+```
+
+
+```{r}
+
+threat_cul_age_t_test_f4 <- threat_cul_age_t_test %>% 
+  filter(xmin==1&xmax==2&AGE_50=="18-49"|xmin==1&xmax==2&AGE_50=="50-64"|
+           xmin==2&xmax==3&AGE_50=="18-49"|xmin==2&xmax==3&AGE_50=="50-64"|
+           xmin==1&xmax==3&AGE_50=="18-49"|xmin==1&xmax==3&AGE_50=="50-64"|
+           xmin==3&xmax==4&AGE_50=="18-49"|xmin==3&xmax==4&AGE_50=="50-64")
+
+threat_cul_age_f4 <- Safe_thr_age %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the AGE_50 variable
+threat_cul_age_t_test_f4$xmin <- ifelse(threat_cul_age_t_test_f4$AGE_50 == "18-49", threat_cul_age_t_test_f4$xmin - 0.25, threat_cul_age_t_test_f4$xmin + 0.25)
+threat_cul_age_t_test_f4$xmax <- ifelse(threat_cul_age_t_test_f4$AGE_50 == "18-49", threat_cul_age_t_test_f4$xmax - 0.25, threat_cul_age_t_test_f4$xmax + 0.25)
+
+```
+
+
+```{r}
+
+
+plot_threat_cul_age <- threat_cul_age_f4  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=AGE_50), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=AGE_50), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=AGE_50 ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Culture")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.3))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#13BBC3","#801414"))
+
+```
+
+
+
+```{r, fig.height=6, fig.width=8}
+
+plot_threat_cul_age <-plot_threat_cul_age + stat_pvalue_manual(threat_cul_age_t_test_f4, 
+                                                               label = "signif_weighted",y.position = c(5, 5.7, 5, 5, 
+                                                                                                        5.4, 6, 5.4, 5.4),
+                                                               bracket.shorten = 0.03)
+
+plot_threat_cul_age
+
+```
+
+#### conbine 4 figures
+
+```{r, fig.height=7, fig.width=12}
+# tiff("output/Figure_S9.tiff", units = "cm", width = 27 , height = 17, res= 400)
+
+ggarrange(plot_threat_job_age, plot_threat_mate_age, plot_threat_safe_age, plot_threat_cul_age, 
+          labels = c("A","B","C","D"),
+          ncol = 2,nrow = 2, common.legend = TRUE, legend = "bottom") 
+
+
+# dev.off()
+```
+
+
+
+
+### The interplay with scenarios and AfD supports
+#### by Afd (AfD/Not Vote or Not Qualified/Non-AfD)
+   
+
+```{r}
+
+table(dt_for_sm$AfD)
+
+# AfD    Non-AfD    Not Vote or Not Qualified 
+# 179    176        21 
+
+dt_afd <- dt_for_sm %>% filter(AfD=="AfD"|AfD=="Non-AfD")
+
+```
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+Non_accept_afd <- dt_afd %>% 
+  group_by(scenario, AfD)%>%
+  summarise(mean=weighted.mean(non_accept, psweight),
+            sd=sqrt(wtd.var(non_accept, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Non-Acceptance")
+
+Job_com_afd <- dt_afd %>% 
+  group_by(scenario, AfD)%>%
+  summarise(mean=weighted.mean(threat_job, psweight),
+            sd=sqrt(wtd.var(threat_job, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Job Competition")
+
+
+Mate_com_afd <- dt_afd %>% 
+  group_by(scenario, AfD)%>%
+  summarise(mean=weighted.mean(threat_mate, psweight),
+            sd=sqrt(wtd.var(threat_mate, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Mate Competition")
+
+
+Cul_thr_afd <- dt_afd %>% 
+  group_by(scenario, AfD)%>%
+  summarise(mean=weighted.mean(threat_culture, psweight),
+            sd=sqrt(wtd.var(threat_culture, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to German Culture")
+
+
+Safe_thr_afd <- dt_afd %>% 
+  group_by(scenario, AfD)%>%
+  summarise(mean=weighted.mean(threat_safety, psweight),
+            sd=sqrt(wtd.var(threat_safety, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Safety")
+
+```
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+
+Thr_afd <- rbind(Non_accept_afd, Job_com_afd, Mate_com_afd, Cul_thr_afd, Safe_thr_afd)
+names(Thr_afd) <- tolower(names(Thr_afd))
+
+Thr_afd$scenario <- factor(Thr_afd$scenario , 
+                       levels = c("brown_male_0", 
+                                  "brown_male_50", 
+                                  "brown_male_100", 
+                                  "white_male_100", 
+                                  "German_male_0", 
+                                  "German_male_50", 
+                                  "German_male_100"), 
+                       labels= c("Non-White Refugee Male 0%",
+                                 "Non-White Refugee Male 50%",
+                                 "Non-White Refugee Male 100%",
+                                 "White Refugee Male 100%",
+                                 "German Male 0%",
+                                 "German Male 50%", 
+                                 "German Male 100%"), ordered = T)
+
+
+Thr_afd <- Thr_afd[order(Thr_afd$threat_type, Thr_afd$scenario),]
+
+print(Thr_afd, n=30)
+
+mean.tab_afd <- gt(data = Thr_afd) %>% 
+  tab_header(
+    title = "Weighted Mean Scores by Conditions across AfD suppoots of Respondants")%>%
+  tab_source_note("confidence Level: 0.95")
+
+mean.tab_afd
+
+
+```
+
+
+### Non-Acceptance
+##### Unweighted pairwise p value
+```{r}
+
+non_accept_afd_t_test <-dt_afd %>% group_by(AfD)%>%
+  pairwise_t_test(non_accept~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+non_accept_afd_t_test <- non_accept_afd_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+non_accept_afd_t_test <- non_accept_afd_t_test %>% 
+  filter(xmin==1&xmax==2&AfD=="AfD"|xmin==1&xmax==2&AfD=="Non-AfD"|xmin==2&xmax==3&AfD=="AfD"|xmin==2&xmax==3&AfD=="Non-AfD"|
+           xmin==1&xmax==3&AfD=="AfD"|xmin==1&xmax==3&AfD=="Non-AfD"|xmin==3&xmax==4&AfD=="AfD"|xmin==3&xmax==4&AfD=="Non-AfD"|
+           xmin==1&xmax==5&AfD=="AfD"|xmin==1&xmax==5&AfD=="Non-AfD"|xmin==2&xmax==6&AfD=="AfD"|xmin==2&xmax==6&AfD=="Non-AfD"|
+           xmin==3&xmax==7&AfD=="AfD"|xmin==3&xmax==7&AfD=="Non-AfD")
+
+```
+
+
+
+###### Weighted p value, combined into unweighted dataframe
+
+```{r}
+# data split into  male and female
+
+data_noafd <-dt_afd %>% filter(AfD=="Non-AfD")
+data_afd <-dt_afd %>% filter(AfD=="AfD")
+
+
+# Function of weighted t-test for a pair of scenarios
+perform_weighted_t_test <- function(data, scenario1, scenario2, psweight) {
+  filtered_data <- data %>%
+    filter(scenario %in% c(scenario1, scenario2))
+  survey_design <- svydesign(ids = ~1, weights = psweight, data = filtered_data)
+  weighted_t_test_result <- svyttest(non_accept ~ scenario, design = survey_design)
+  return(weighted_t_test_result$p.value)
+}
+
+# Paired scenarios
+scenario_pairs <- list(
+  c("brown_male_0", "brown_male_50"),
+  c("brown_male_0", "brown_male_100"),
+  c("brown_male_0", "German_male_0"),
+  c("brown_male_50", "brown_male_100"),
+  c("brown_male_50", "German_male_50"),
+  c("brown_male_100", "white_male_100"),
+  c("brown_male_100", "German_male_100")
+)
+
+# Perform weighted t-test for each pair of scenarios
+p_weighted_noafd <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_noafd, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_noafd<- as.data.frame(p_weighted_noafd)
+
+p_weighted_afd <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_afd, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_afd<- as.data.frame(p_weighted_afd)
+
+colnames(p_weighted_noafd)= colnames(p_weighted_afd)
+
+p_weighted <- bind_rows(p_weighted_noafd, p_weighted_afd)
+
+colnames(p_weighted) <- "p_weighted"
+
+# Combine results
+non_accept_afd_t_test <- cbind(non_accept_afd_t_test, p_weighted)
+
+# Remove objects
+rm(scenario_pairs, p_weighted_noafd, p_weighted_afd, p_weighted)
+
+
+non_accept_afd_t_test <- non_accept_afd_t_test %>% 
+  mutate(signif_weighted = case_when(
+    p_weighted < 0.001 ~ "***",
+    p_weighted < 0.01 ~ "**",
+    p_weighted < 0.05 ~ "*",
+    p_weighted < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+```
+
+
+```{r}
+
+non_accept_afd_t_test_f3 <- non_accept_afd_t_test %>% 
+  filter(xmin==1&xmax==2&AfD=="AfD"|xmin==1&xmax==2&AfD=="Non-AfD"|
+           xmin==2&xmax==3&AfD=="AfD"|xmin==2&xmax==3&AfD=="Non-AfD"|
+           xmin==1&xmax==3&AfD=="AfD"|xmin==1&xmax==3&AfD=="Non-AfD"|
+           xmin==3&xmax==4&AfD=="AfD"|xmin==3&xmax==4&AfD=="Non-AfD")
+
+non_accept_afd_f3 <- Non_accept_afd %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the AfD variable
+non_accept_afd_t_test_f3$xmin <- ifelse(non_accept_afd_t_test_f3$AfD == "AfD", non_accept_afd_t_test_f3$xmin - 0.25, non_accept_afd_t_test_f3$xmin + 0.25)
+non_accept_afd_t_test_f3$xmax <- ifelse(non_accept_afd_t_test_f3$AfD == "AfD", non_accept_afd_t_test_f3$xmax - 0.25, non_accept_afd_t_test_f3$xmax + 0.25)
+
+```
+
+
+```{r}
+
+
+plot_non_accept_afd <- non_accept_afd_f3  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=AfD), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=AfD), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=AfD ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Non-Acceptance")+
+  xlab(NULL)+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.3))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#8D3017","#1F81B3"))
+
+```
+
+
+
+```{r, fig.height=6, fig.width=8}
+
+plot_non_accept_afd <-plot_non_accept_afd + stat_pvalue_manual(non_accept_afd_t_test_f3, 
+                                                               label = "signif_weighted",y.position = c(5.1, 5.7, 5.1, 5.1, 
+                                                                                                        5.4, 6, 5.4, 5.4),
+                                                               bracket.shorten = 0.03)
+
+plot_non_accept_afd
+
+```
+
+
+```{r}
+
+# ggsave(filename = "U:/sex_ratio/output/Figure_S10.tiff", plot_non_accept_afd, width = 16, height = 10, dpi=300, units = "cm")
+
+```
+
+### Perceived Threats
+#### Job Competition
+##### Unweighted pairwise p value
+```{r}
+
+threat_job_afd_t_test <-dt_afd %>% group_by(AfD)%>%
+  pairwise_t_test(threat_job~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_job_afd_t_test <- threat_job_afd_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_job_afd_t_test <- threat_job_afd_t_test %>% 
+  filter(xmin==1&xmax==2&AfD=="AfD"|xmin==1&xmax==2&AfD=="Non-AfD"|xmin==2&xmax==3&AfD=="AfD"|xmin==2&xmax==3&AfD=="Non-AfD"|
+           xmin==1&xmax==3&AfD=="AfD"|xmin==1&xmax==3&AfD=="Non-AfD"|xmin==3&xmax==4&AfD=="AfD"|xmin==3&xmax==4&AfD=="Non-AfD"|
+           xmin==1&xmax==5&AfD=="AfD"|xmin==1&xmax==5&AfD=="Non-AfD"|xmin==2&xmax==6&AfD=="AfD"|xmin==2&xmax==6&AfD=="Non-AfD"|
+           xmin==3&xmax==7&AfD=="AfD"|xmin==3&xmax==7&AfD=="Non-AfD")
+
+```
+
+
+
+###### Weighted p value, combined into unweighted dataframe
+
+```{r}
+# data split into  male and female
+
+data_noafd <-dt_afd %>% filter(AfD=="Non-AfD")
+data_afd <-dt_afd %>% filter(AfD=="AfD")
+
+
+# Function of weighted t-test for a pair of scenarios
+perform_weighted_t_test <- function(data, scenario1, scenario2, psweight) {
+  filtered_data <- data %>%
+    filter(scenario %in% c(scenario1, scenario2))
+  survey_design <- svydesign(ids = ~1, weights = psweight, data = filtered_data)
+  weighted_t_test_result <- svyttest(threat_job ~ scenario, design = survey_design)
+  return(weighted_t_test_result$p.value)
+}
+
+# Paired scenarios
+scenario_pairs <- list(
+  c("brown_male_0", "brown_male_50"),
+  c("brown_male_0", "brown_male_100"),
+  c("brown_male_0", "German_male_0"),
+  c("brown_male_50", "brown_male_100"),
+  c("brown_male_50", "German_male_50"),
+  c("brown_male_100", "white_male_100"),
+  c("brown_male_100", "German_male_100")
+)
+
+# Perform weighted t-test for each pair of scenarios
+p_weighted_noafd <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_noafd, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_noafd<- as.data.frame(p_weighted_noafd)
+
+p_weighted_afd <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_afd, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_afd<- as.data.frame(p_weighted_afd)
+
+colnames(p_weighted_noafd)= colnames(p_weighted_afd)
+
+p_weighted <- bind_rows(p_weighted_noafd, p_weighted_afd)
+
+colnames(p_weighted) <- "p_weighted"
+
+# Combine results
+threat_job_afd_t_test <- cbind(threat_job_afd_t_test, p_weighted)
+
+# Remove objects
+rm(scenario_pairs, p_weighted_noafd, p_weighted_afd, p_weighted)
+
+
+threat_job_afd_t_test <- threat_job_afd_t_test %>% 
+  mutate(signif_weighted = case_when(
+    p_weighted < 0.001 ~ "***",
+    p_weighted < 0.01 ~ "**",
+    p_weighted < 0.05 ~ "*",
+    p_weighted < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+```
+
+
+```{r}
+
+threat_job_afd_t_test_f3 <- threat_job_afd_t_test %>% 
+  filter(xmin==1&xmax==2&AfD=="AfD"|xmin==1&xmax==2&AfD=="Non-AfD"|
+           xmin==2&xmax==3&AfD=="AfD"|xmin==2&xmax==3&AfD=="Non-AfD"|
+           xmin==1&xmax==3&AfD=="AfD"|xmin==1&xmax==3&AfD=="Non-AfD"|
+           xmin==3&xmax==4&AfD=="AfD"|xmin==3&xmax==4&AfD=="Non-AfD")
+
+threat_job_afd_f3 <- Job_com_afd %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the AfD variable
+threat_job_afd_t_test_f3$xmin <- ifelse(threat_job_afd_t_test_f3$AfD == "AfD", threat_job_afd_t_test_f3$xmin - 0.25, threat_job_afd_t_test_f3$xmin + 0.25)
+threat_job_afd_t_test_f3$xmax <- ifelse(threat_job_afd_t_test_f3$AfD == "AfD", threat_job_afd_t_test_f3$xmax - 0.25, threat_job_afd_t_test_f3$xmax + 0.25)
+
+```
+
+
+```{r}
+
+
+plot_threat_job_afd <- threat_job_afd_f3  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=AfD), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=AfD), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=AfD ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Non-Acceptance")+
+  xlab(NULL)+
+  ggtitle("Job Competition")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.4))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#8D3017","#1F81B3"))
+
+```
+
+
+
+```{r, fig.height=6, fig.width=8}
+
+plot_threat_job_afd <-plot_threat_job_afd + stat_pvalue_manual(threat_job_afd_t_test_f3, 
+                                                               label = "signif_weighted",y.position = c(5.25, 5.8, 5.25, 5.25, 
+                                                                                                        5.55, 6.1, 5.55, 5.55),
+                                                               bracket.shorten = 0.03)
+
+plot_threat_job_afd
+
+```
+
+
+#### Mate Competition
+##### Unweighted pairwise p value
+```{r}
+
+threat_mate_afd_t_test <-dt_afd %>% group_by(AfD)%>%
+  pairwise_t_test(threat_mate~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_mate_afd_t_test <- threat_mate_afd_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_mate_afd_t_test <- threat_mate_afd_t_test %>% 
+  filter(xmin==1&xmax==2&AfD=="AfD"|xmin==1&xmax==2&AfD=="Non-AfD"|xmin==2&xmax==3&AfD=="AfD"|xmin==2&xmax==3&AfD=="Non-AfD"|
+           xmin==1&xmax==3&AfD=="AfD"|xmin==1&xmax==3&AfD=="Non-AfD"|xmin==3&xmax==4&AfD=="AfD"|xmin==3&xmax==4&AfD=="Non-AfD"|
+           xmin==1&xmax==5&AfD=="AfD"|xmin==1&xmax==5&AfD=="Non-AfD"|xmin==2&xmax==6&AfD=="AfD"|xmin==2&xmax==6&AfD=="Non-AfD"|
+           xmin==3&xmax==7&AfD=="AfD"|xmin==3&xmax==7&AfD=="Non-AfD")
+
+```
+
+
+
+###### Weighted p value, combined into unweighted dataframe
+
+```{r}
+# data split into  male and female
+
+data_noafd <-dt_afd %>% filter(AfD=="Non-AfD")
+data_afd <-dt_afd %>% filter(AfD=="AfD")
+
+
+# Function of weighted t-test for a pair of scenarios
+perform_weighted_t_test <- function(data, scenario1, scenario2, psweight) {
+  filtered_data <- data %>%
+    filter(scenario %in% c(scenario1, scenario2))
+  survey_design <- svydesign(ids = ~1, weights = psweight, data = filtered_data)
+  weighted_t_test_result <- svyttest(threat_mate ~ scenario, design = survey_design)
+  return(weighted_t_test_result$p.value)
+}
+
+# Paired scenarios
+scenario_pairs <- list(
+  c("brown_male_0", "brown_male_50"),
+  c("brown_male_0", "brown_male_100"),
+  c("brown_male_0", "German_male_0"),
+  c("brown_male_50", "brown_male_100"),
+  c("brown_male_50", "German_male_50"),
+  c("brown_male_100", "white_male_100"),
+  c("brown_male_100", "German_male_100")
+)
+
+# Perform weighted t-test for each pair of scenarios
+p_weighted_noafd <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_noafd, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_noafd<- as.data.frame(p_weighted_noafd)
+
+p_weighted_afd <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_afd, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_afd<- as.data.frame(p_weighted_afd)
+
+colnames(p_weighted_noafd)= colnames(p_weighted_afd)
+
+p_weighted <- bind_rows(p_weighted_noafd, p_weighted_afd)
+
+colnames(p_weighted) <- "p_weighted"
+
+# Combine results
+threat_mate_afd_t_test <- cbind(threat_mate_afd_t_test, p_weighted)
+
+# Remove objects
+rm(scenario_pairs, p_weighted_noafd, p_weighted_afd, p_weighted)
+
+
+threat_mate_afd_t_test <- threat_mate_afd_t_test %>% 
+  mutate(signif_weighted = case_when(
+    p_weighted < 0.001 ~ "***",
+    p_weighted < 0.01 ~ "**",
+    p_weighted < 0.05 ~ "*",
+    p_weighted < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+```
+
+
+```{r}
+
+threat_mate_afd_t_test_f3 <- threat_mate_afd_t_test %>% 
+  filter(xmin==1&xmax==2&AfD=="AfD"|xmin==1&xmax==2&AfD=="Non-AfD"|
+           xmin==2&xmax==3&AfD=="AfD"|xmin==2&xmax==3&AfD=="Non-AfD"|
+           xmin==1&xmax==3&AfD=="AfD"|xmin==1&xmax==3&AfD=="Non-AfD"|
+           xmin==3&xmax==4&AfD=="AfD"|xmin==3&xmax==4&AfD=="Non-AfD")
+
+threat_mate_afd_f3 <- Mate_com_afd %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the AfD variable
+threat_mate_afd_t_test_f3$xmin <- ifelse(threat_mate_afd_t_test_f3$AfD == "AfD", threat_mate_afd_t_test_f3$xmin - 0.25, threat_mate_afd_t_test_f3$xmin + 0.25)
+threat_mate_afd_t_test_f3$xmax <- ifelse(threat_mate_afd_t_test_f3$AfD == "AfD", threat_mate_afd_t_test_f3$xmax - 0.25, threat_mate_afd_t_test_f3$xmax + 0.25)
+
+```
+
+
+```{r}
+
+
+plot_threat_mate_afd <- threat_mate_afd_f3  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=AfD), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=AfD), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=AfD ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Non-Acceptance")+
+  xlab(NULL)+
+  ggtitle("Mate Competition")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.3))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#8D3017","#1F81B3"))
+
+```
+
+
+
+```{r, fig.height=6, fig.width=8}
+
+plot_threat_mate_afd <-plot_threat_mate_afd + stat_pvalue_manual(threat_mate_afd_t_test_f3, 
+                                                               label = "signif_weighted",y.position = c(5.1, 5.7, 5.1, 5.1, 
+                                                                                                        5.4, 6, 5.4, 5.4),
+                                                               bracket.shorten = 0.03)
+
+plot_threat_mate_afd
+
+```
+
+
+
+#### Safety
+##### Unweighted pairwise p value
+```{r}
+
+threat_safety_afd_t_test <-dt_afd %>% group_by(AfD)%>%
+  pairwise_t_test(threat_safety~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_safety_afd_t_test <- threat_safety_afd_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_safety_afd_t_test <- threat_safety_afd_t_test %>% 
+  filter(xmin==1&xmax==2&AfD=="AfD"|xmin==1&xmax==2&AfD=="Non-AfD"|xmin==2&xmax==3&AfD=="AfD"|xmin==2&xmax==3&AfD=="Non-AfD"|
+           xmin==1&xmax==3&AfD=="AfD"|xmin==1&xmax==3&AfD=="Non-AfD"|xmin==3&xmax==4&AfD=="AfD"|xmin==3&xmax==4&AfD=="Non-AfD"|
+           xmin==1&xmax==5&AfD=="AfD"|xmin==1&xmax==5&AfD=="Non-AfD"|xmin==2&xmax==6&AfD=="AfD"|xmin==2&xmax==6&AfD=="Non-AfD"|
+           xmin==3&xmax==7&AfD=="AfD"|xmin==3&xmax==7&AfD=="Non-AfD")
+
+```
+
+
+
+###### Weighted p value, combined into unweighted dataframe
+
+```{r}
+# data split into  afd and non-afd
+
+data_noafd <-dt_afd %>% filter(AfD=="Non-AfD")
+data_afd <-dt_afd %>% filter(AfD=="AfD")
+
+
+# Function of weighted t-test for a pair of scenarios
+perform_weighted_t_test <- function(data, scenario1, scenario2, psweight) {
+  filtered_data <- data %>%
+    filter(scenario %in% c(scenario1, scenario2))
+  survey_design <- svydesign(ids = ~1, weights = psweight, data = filtered_data)
+  weighted_t_test_result <- svyttest(threat_safety ~ scenario, design = survey_design)
+  return(weighted_t_test_result$p.value)
+}
+
+# Paired scenarios
+scenario_pairs <- list(
+  c("brown_male_0", "brown_male_50"),
+  c("brown_male_0", "brown_male_100"),
+  c("brown_male_0", "German_male_0"),
+  c("brown_male_50", "brown_male_100"),
+  c("brown_male_50", "German_male_50"),
+  c("brown_male_100", "white_male_100"),
+  c("brown_male_100", "German_male_100")
+)
+
+# Perform weighted t-test for each pair of scenarios
+p_weighted_noafd <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_noafd, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_noafd<- as.data.frame(p_weighted_noafd)
+
+p_weighted_afd <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_afd, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_afd<- as.data.frame(p_weighted_afd)
+
+colnames(p_weighted_noafd)= colnames(p_weighted_afd)
+
+p_weighted <- bind_rows(p_weighted_noafd, p_weighted_afd)
+
+colnames(p_weighted) <- "p_weighted"
+
+# Combine results
+threat_safety_afd_t_test <- cbind(threat_safety_afd_t_test, p_weighted)
+
+# Remove objects
+rm(scenario_pairs, p_weighted_noafd, p_weighted_afd, p_weighted)
+
+
+threat_safety_afd_t_test <- threat_safety_afd_t_test %>% 
+  mutate(signif_weighted = case_when(
+    p_weighted < 0.001 ~ "***",
+    p_weighted < 0.01 ~ "**",
+    p_weighted < 0.05 ~ "*",
+    p_weighted < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+```
+
+
+```{r}
+
+threat_safety_afd_t_test_f3 <- threat_safety_afd_t_test %>% 
+  filter(xmin==1&xmax==2&AfD=="AfD"|xmin==1&xmax==2&AfD=="Non-AfD"|
+           xmin==2&xmax==3&AfD=="AfD"|xmin==2&xmax==3&AfD=="Non-AfD"|
+           xmin==1&xmax==3&AfD=="AfD"|xmin==1&xmax==3&AfD=="Non-AfD"|
+           xmin==3&xmax==4&AfD=="AfD"|xmin==3&xmax==4&AfD=="Non-AfD")
+
+threat_safety_afd_f3 <- Safe_thr_afd %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the AfD variable
+threat_safety_afd_t_test_f3$xmin <- ifelse(threat_safety_afd_t_test_f3$AfD == "AfD", threat_safety_afd_t_test_f3$xmin - 0.25, threat_safety_afd_t_test_f3$xmin + 0.25)
+threat_safety_afd_t_test_f3$xmax <- ifelse(threat_safety_afd_t_test_f3$AfD == "AfD", threat_safety_afd_t_test_f3$xmax - 0.25, threat_safety_afd_t_test_f3$xmax + 0.25)
+
+```
+
+
+```{r}
+
+
+plot_threat_safety_afd <- threat_safety_afd_f3  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=AfD), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=AfD), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=AfD ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Non-Acceptance")+
+  xlab(NULL)+
+  ggtitle("Safety")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.3))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#8D3017","#1F81B3"))
+
+```
+
+
+
+```{r, fig.height=6, fig.width=8}
+
+plot_threat_safety_afd <-plot_threat_safety_afd + stat_pvalue_manual(threat_safety_afd_t_test_f3, 
+                                                               label = "signif_weighted",y.position = c(5.1, 5.7, 5.1, 5.1, 
+                                                                                                        5.4, 6, 5.4, 5.4),
+                                                               bracket.shorten = 0.03)
+
+plot_threat_safety_afd
+
+```
+
+
+
+#### Culture
+##### Unweighted pairwise p value
+```{r}
+
+#dt_cul<- dt_for_sm %>% filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+threat_cul_afd_t_test <-dt_cul %>% group_by(AfD)%>%
+  pairwise_t_test(threat_culture ~ scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_cul_afd_t_test <- threat_cul_afd_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_cul_afd_t_test <- threat_cul_afd_t_test %>% 
+  filter(xmin==1&xmax==2&AfD=="AfD"|xmin==1&xmax==2&AfD=="Non-AfD"|xmin==2&xmax==3&AfD=="AfD"|xmin==2&xmax==3&AfD=="Non-AfD"|
+           xmin==1&xmax==3&AfD=="AfD"|xmin==1&xmax==3&AfD=="Non-AfD"|xmin==3&xmax==4&AfD=="AfD"|xmin==3&xmax==4&AfD=="Non-AfD"|
+           xmin==1&xmax==5&AfD=="AfD"|xmin==1&xmax==5&AfD=="Non-AfD"|xmin==2&xmax==6&AfD=="AfD"|xmin==2&xmax==6&AfD=="Non-AfD"|
+           xmin==3&xmax==7&AfD=="AfD"|xmin==3&xmax==7&AfD=="Non-AfD")
+
+```
+
+###### Weighted p value, combined into unweighted dataframe
+
+```{r}
+# data split into  male and female
+
+data_afd <-dt_cul %>% filter(AfD=="AfD")
+data_noafd <-dt_cul %>% filter(AfD=="Non-AfD")
+
+
+# Function of weighted t-test for a pair of scenarios
+perform_weighted_t_test <- function(data, scenario1, scenario2, psweight) {
+  filtered_data <- data %>%
+    filter(scenario %in% c(scenario1, scenario2))
+  survey_design <- svydesign(ids = ~1, weights = psweight, data = filtered_data)
+  weighted_t_test_result <- svyttest(threat_culture ~ scenario, design = survey_design)
+  return(weighted_t_test_result$p.value)
+}
+
+# Paired scenarios
+scenario_pairs <- list(
+  c("brown_male_0", "brown_male_50"),
+  c("brown_male_0", "brown_male_100"),
+  c("brown_male_50", "brown_male_100"),
+  c("brown_male_100", "white_male_100")
+)
+
+# Perform weighted t-test for each pair of scenarios
+p_weighted_afd <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_afd, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_afd<- as.data.frame(p_weighted_afd)
+
+p_weighted_noafd <- sapply(scenario_pairs, function(pair) {
+  perform_weighted_t_test(data_noafd, pair[1], pair[2], ~psweight)
+})
+
+p_weighted_noafd<- as.data.frame(p_weighted_noafd)
+
+colnames(p_weighted_afd)= colnames(p_weighted_noafd)
+
+p_weighted <- bind_rows(p_weighted_afd, p_weighted_noafd)
+
+colnames(p_weighted) <- "p_weighted"
+
+# Combine results
+threat_cul_afd_t_test <- cbind(threat_cul_afd_t_test, p_weighted)
+
+# Remove objects
+rm(scenario_pairs, p_weighted_afd, p_weighted_noafd, p_weighted)
+
+
+threat_cul_afd_t_test <- threat_cul_afd_t_test %>% 
+  mutate(signif_weighted = case_when(
+    p_weighted < 0.001 ~ "***",
+    p_weighted < 0.01 ~ "**",
+    p_weighted < 0.05 ~ "*",
+    p_weighted < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+```
+
+
+```{r}
+
+threat_cul_afd_t_test_f4 <- threat_cul_afd_t_test %>% 
+  filter(xmin==1&xmax==2&AfD=="AfD"|xmin==1&xmax==2&AfD=="Non-AfD"|
+           xmin==2&xmax==3&AfD=="AfD"|xmin==2&xmax==3&AfD=="Non-AfD"|
+           xmin==1&xmax==3&AfD=="AfD"|xmin==1&xmax==3&AfD=="Non-AfD"|
+           xmin==3&xmax==4&AfD=="AfD"|xmin==3&xmax==4&AfD=="Non-AfD")
+
+threat_cul_afd_f4 <- Cul_thr_afd %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the AfD variable
+threat_cul_afd_t_test_f4$xmin <- ifelse(threat_cul_afd_t_test_f4$AfD == "AfD", threat_cul_afd_t_test_f4$xmin - 0.25, threat_cul_afd_t_test_f4$xmin + 0.25)
+threat_cul_afd_t_test_f4$xmax <- ifelse(threat_cul_afd_t_test_f4$AfD == "AfD", threat_cul_afd_t_test_f4$xmax - 0.25, threat_cul_afd_t_test_f4$xmax + 0.25)
+
+```
+
+
+```{r}
+
+
+plot_threat_cul_afd <- threat_cul_afd_f4  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=AfD), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=AfD), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=AfD ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Culture")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.3))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#8D3017","#1F81B3"))
+
+```
+
+
+
+```{r, fig.height=6, fig.width=8}
+
+plot_threat_cul_afd <-plot_threat_cul_afd + stat_pvalue_manual(threat_cul_afd_t_test_f4, 
+                                                               label = "signif_weighted",y.position = c(5, 5.7, 5, 5, 
+                                                                                                        5.4, 6, 5.4, 5.4),
+                                                               bracket.shorten = 0.03)
+
+plot_threat_cul_afd
+
+```
+
+
+
+#### conbine 4 figures
+
+```{r, fig.height=7, fig.width=12}
+# tiff("output/Figure_S11.tiff", units = "cm", width = 27 , height = 17, res= 400)
+
+ggarrange(plot_threat_job_afd, plot_threat_mate_afd, plot_threat_safety_afd, plot_threat_cul_afd, 
+          labels = c("A","B","C","D"),
+          ncol = 2,nrow = 2, common.legend = TRUE, legend = "bottom") 
+
+
+# dev.off()
+```
+
+
+
+
+
+

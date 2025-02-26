@@ -1,0 +1,866 @@
+---
+title: "sex_ratio_w1_w2_analysis_6_additional_figs"
+author: "Chia-Jung Tsai"
+date: "2024-08-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE)
+
+library(tidyverse)
+library(stringr)
+library(RColorBrewer)
+library(ggpubr)
+library(Hmisc)
+library(effsize)
+library(stringr)
+library(gt)
+library(rstatix) #Pairwise t test
+library(survey) #Weighted tests
+
+```
+
+> Data is weighted (by Sex and Age_2) and imputed
+> Dataset: ATRP_imputed_pswt_v2.csv
+
+
+```{r}
+
+dt.imp.wt <- readr::read_csv("Data/ATRP_imputed_pswt_v2.csv") # the data set with the bigger sale of weight on AGE (=AGE_2)
+dt.imp.wt <- subset(dt.imp.wt, select = -c(...1)) # delete the weird column of "...1" from csv format
+
+```
+
+
+
+```{r}
+dt.imp.wt$scenario <- factor(dt.imp.wt$equation,
+levels = c(1,2,3,4,5,6,7),
+labels = c("brown_male_0", "brown_male_50", "brown_male_100", "white_male_100", "German_male_0", "German_male_50", "German_male_100"))
+
+dt.imp.wt$CONT <- factor(dt.imp.wt$CONT,
+levels = c(0,1,2,3),
+labels = c("Never", " Once", "A few times","Several times"))
+
+dt.imp.wt$REFDE <- factor(dt.imp.wt$REFDE,
+levels = c(1,2,3,4),
+labels = c("lower than 1%", "1.5%", "3%","higher than 5%"))
+
+dt.imp.wt$REFSTA <- factor(dt.imp.wt$REFSTA,
+levels = c(1,2,3,4),
+labels = c("lower than 1%", "1.5%", "3%","higher than 5%"))
+
+dt.imp.wt$REFNHB <- factor(dt.imp.wt$REFNHB,
+levels = c(1,2,3,4),
+labels = c("lower than 1%", "1.5%", "3%","higher than 5%"))
+
+dt.imp.wt$SEXDE <- factor(dt.imp.wt$SEXDE,
+levels = c(1,2,3,4,5),
+labels = c("women>>men", "women>men", "women=men","women<men","women<<men"))
+
+dt.imp.wt$SEXSTA <- factor(dt.imp.wt$SEXSTA,
+levels = c(1,2,3,4,5),
+labels = c("women>>men", "women>men", "women=men","women<men","women<<men"))
+
+dt.imp.wt$SEXNHB <- factor(dt.imp.wt$SEXNHB,
+levels = c(1,2,3,4,5),
+labels = c("women>>men", "women>men", "women=men","women<men","women<<men"))
+
+dt.imp.wt$AGE <- factor(dt.imp.wt$AGE,
+levels = c(1,2,3,4,5,6,7,8,9,10),
+labels = c("18-24", "25-29", "30-34","35-39","40-44","45-49","50-54","55-59","60-64","Over65"))
+
+
+dt.imp.wt$AGE_2 <- factor(dt.imp.wt$AGE_2,
+levels = c(1,2,3,4,5),
+labels = c("18-29", "30-39","40-49","50-59","60-64"))
+
+
+dt.imp.wt$SEX <- factor(dt.imp.wt$SEX,
+levels = c(0,1,2),
+labels = c("Male", "Female", "Diverse"))
+
+dt.imp.wt$origin<- ifelse(dt.imp.wt$CTR=="DE","Germany","Not Germany") 
+
+dt.imp.wt$DE <- factor(dt.imp.wt$DE,
+levels = c(0,1),
+labels = c("Not In Germany", "Germany"))
+
+dt.imp.wt$BUNDESLAND <- factor(dt.imp.wt$BUNDESLAND,
+levels = c("BW","BY","BE","BB","HB","HH","HE","NI",
+           "MV","NW","RP","SL","SN","ST","SH","TH"),
+labels = c("Baden-Württemberg",
+           "Bayern",
+           "Berlin",
+           "Brandenburg",
+           "Bremen",
+           "Hamburg",
+           "Hessen", 
+           "Niedersachsen", 
+           "Mecklenburg-Vorpommern", 
+           "Nordrhein-Westfalen", 
+           "Rheinland-Pfalz", 
+           "Saarland", 
+           "Sachsen", 
+           "Sachsen-Anhalt", 
+           "Schleswig-Holstein", 
+           "Thüringen"))
+
+dt.imp.wt$BER <- factor(dt.imp.wt$BER,
+levels = c(1,2,3,4,5,6,7,8,9,10,11,12),
+labels = c("Mitte",
+           "Friedrichshain-Kreuzberg", 
+           "Neukölln", 
+           "Charlottenburg-Wilmersdorf", 
+           "Spandau", 
+           "Steglitz-Zehlendorf", 
+           "Tempelhof-Schöneberg", 
+           "Reinickendorf", 
+           "Pankow", 
+           "Marzahn-Hellersdorf", 
+           "Lichtenberg", 
+           "Treptow-Köpenick"))
+
+dt.imp.wt$JOBSTATUS <- factor(dt.imp.wt$JOBSTATUS,
+ levels = c(1,2,3,4,5,6,7,8),
+ labels = c("Paid work", 
+            "School/training",
+            "Unemployed and actively looking for a job",
+            "Unemployed, wanting a job but not actively looking",
+            "Chronically ill or disabled",
+            "Pre-retired/retired/early retired/retired",
+            "Voluntary military service/federal voluntary service/FSJ/FÖJ",
+            "Housework, caring for children or other people"))
+
+dt.imp.wt$EDU <- factor(dt.imp.wt$EDU,
+ levels = c(1,2,3,4,5),
+ labels = c("No formal education",
+            "Elementary school",
+            "Further school/secondary school",
+            "University education (e.g. Bachelor, Master)",
+            "Graduate studies (e.g. doctorate, medical doctorate"))
+
+dt.imp.wt$PRTALSTATUS <- factor(dt.imp.wt$PRTALSTATUS,
+ levels = c(1,2,3),
+ labels = c("Yes",
+            "No",
+            "Not applicable"))
+
+dt.imp.wt$PLT <- factor(dt.imp.wt$PLT,
+levels = c(1,2,3,4,5,6,7,8,9,10),
+labels = c("CDU/CSU",
+           "SPD", 
+           "Buendnis 90/Gruene", 
+           "Die Linke", 
+           "FDP",
+           "NPD/Republikaner/Die Rechte", 
+           "AfD",
+           "Others", 
+           "Did not vote", 
+           "Not qualified to vote"))
+
+
+```
+
+
+```{r}
+
+# recode PLT into AfD/non-AfD;recode age into 50/over 50
+
+dt.imp.wt <- dt.imp.wt %>%
+  mutate(AfD=case_when(
+    PLT=="AfD" ~ "AfD",
+    PLT=="Did not vote"|PLT=="Not qualified to vote" ~ "Not Vote or Not Qualified" ,
+    .default = "Non-AfD",
+  ))
+
+
+dt.imp.wt <- dt.imp.wt %>%
+  mutate(AGE_50=case_when(
+    AGE_2=="18-29"|AGE_2=="30-39"|AGE_2=="40-49" ~ "18-49",
+    AGE_2=="50-59"|AGE_2=="60-64" ~ "50-64" ,
+  ))
+
+```
+
+
+
+### reverse codeing for outcomes (1: postive; 6: negative)
+
+> R "ATTITUDES" --> Non-Acceptance (1:Acceptance; 6:Non-Acceptance)
+> R "PCPJOBNHB" (1: Threats to job competition ;6: No Threats to job competition ) --> Threat to Job Competition (1: No Threat; 6: Threats)
+> "PCPMATENHB" (1: No Threats to mate competition ;6: Threats to mate competition ) 
+> R "PCPCULNHB" (1: Threats to Culture ;6: Threats to culture) --> Threat to Culture (1: No Threat; 6: Threats)
+> R "PCPSAFENHB" (1: Not Safe ;6: Safe) --> Safety (1: No Safety concern; 6 High Safety concern)
+
+
+```{r, echo=FALSE}
+# only 4 of 5 outcomes reversed 
+dt.imp.wt <-dt.imp.wt%>%
+  mutate_at(c("ATTITUDES", "PCPJOBNHB", "PCPCULNHB","PCPSAFENHB"), 
+            .funs = list(
+              ~case_when( 
+                .==1 ~ 5,
+                .==2 ~ 4,
+                .==3 ~ 3,
+                .==4 ~ 2,
+                .==5 ~ 1,
+                .==6 ~ 0
+                )
+              ))
+
+```
+
+
+
+```{r, echo=FALSE}
+# not reversed 
+dt.imp.wt <-dt.imp.wt%>%
+  mutate_at("PCPMATENHB", 
+            .funs = list(
+              ~case_when( 
+                .==1 ~ 0,
+                .==2 ~ 1,
+                .==3 ~ 2,
+                .==4 ~ 3,
+                .==5 ~ 4,
+                .==6 ~ 5
+                )
+              ))
+
+```
+
+
+
+```{r}
+# rename outcomes
+dt.imp.wt<-dt.imp.wt %>% 
+  rename ("non_accept"="ATTITUDES",
+          "threat_job"="PCPJOBNHB", 
+          "threat_mate"="PCPMATENHB", 
+          "threat_culture"="PCPCULNHB",
+          "threat_safety"="PCPSAFENHB")
+
+
+```
+
+
+```{r, fig.width=10, fig.height=4}
+
+ggplot(dt.imp.wt, aes(scenario, non_accept, color=SEX)) + geom_violin() 
+
+```
+
+
+
+```{r}
+
+model0 = summary(lm(non_accept ~ factor(scenario), weights = psweight, data = dt.imp.wt)); model0
+
+```
+
+
+
+```{r}
+model1 = summary(lm(non_accept ~ factor(scenario)+SEX, weights = psweight, data = dt.imp.wt)); model1
+
+```
+
+```{r}
+
+model2 = summary(lm(non_accept ~ factor(scenario)+SEX+factor(scenario):SEX, weights = psweight, data = dt.imp.wt)); model2
+
+```
+
+```{r}
+
+model3 = lm(non_accept ~ I(scenario =='brown_male_100') + I(SEX == 'Male'), weights = psweight, data = dt.imp.wt); model3
+
+```
+
+```{r}
+#  expected salary for female, all other scenarios  = B0 = 2.4110 
+# expected salary for female 100_non-white_male holding B2 constant =
+  # B0 + B1 = 2.4110 + 1.4546 = 3.8656
+# expected salary for male all other scenarios holding B1 constant = 
+  # B0 + B2 = 2.4110 + 0.2958 = 2.7068
+# expected salary for male 100_non-white_male = 
+  # B0 + B1 + B2 = 2.4110 + 1.4546 + 0.2958 = 4.1614
+
+```
+
+```{r}
+pred.val.sex.scen = matrix(c(2.4110, 3.8656, 2.7068, 4.1614), ncol=2, byrow=TRUE)
+colnames(pred.val.sex.scen) = c("all_others", "100_non_white_male")
+rownames(pred.val.sex.scen) = c("female", "male")
+pred.val.sex.scen = as.table(pred.val.sex.scen)
+
+barplot(pred.val.sex.scen, main="Predicted values of non-acceptance by sex and scenario",
+         col=c("lightpink","lightblue"),    legend = rownames(pred.val.sex.scen), 
+        beside=TRUE)
+
+```
+
+```{r}
+
+Model.int = lm(non_accept ~ I(scenario == 'brown_male_100') + SEX + I(scenario == 'brown_male_100')*SEX, weights = psweight, data=dt.imp.wt)
+summary(Model.int)
+
+```
+
+```{r}
+
+Model.coef =  coefficients(Model.int)
+
+```
+
+
+```{r}
+#B0 is the expected mean for other_scen females
+Model.coef[1]+(Model.coef[2]*0)
+
+# simple intercept = (b0 + b2) = average non_accept for males who are other_scen (b1=0)
+Model.coef[1] + Model.coef[3]
+
+# simple slope = (B1 + B3) captures the effect of 100_non_white_male for males
+Model.coef[2] + Model.coef[3]
+
+# B3 captures the difference in effect for 100_non_white_male among men & women
+Model.coef[4]
+
+
+```
+
+
+```{r}
+# interaction was not sig so not different from 0
+
+# E(Y|b1=1, b2=1 ) (B0 + B2) + (B1 + B3)*1 
+# effects of being male on salary given rank
+scen.wit.sex = (Model.coef[1] + Model.coef[3]) + 
+  ((Model.coef[2] + Model.coef[4])*1); scen.wit.sex
+
+```
+
+
+
+```{r}
+
+#  expected salary for female, all other scenarios  = B0 = 2.7198 
+# expected salary for female 100_non-white_male holding B2 constant =
+  # B0 + B1 = 2.7198 + 1.3543 = 4.0741
+# expected salary for male all other scenarios holding B1 constant = 
+  # B0 + B2 = 2.7198 + 0.2148 = 2.9346
+# expected salary for male 100_non-white_male = 
+  # B0 + B1 + B2 = 2.7198 + 1.3543 +0.2148 = 4.2889
+
+
+pred.val.sex.scen = matrix(c(2.7198, 4.0741, 2.9346, 4.2889), ncol=2, byrow=TRUE)
+colnames(pred.val.sex.scen) = c("all_others", "100_non_white_male")
+rownames(pred.val.sex.scen) = c("female", "male")
+pred.val.sex.scen = as.table(pred.val.sex.scen)
+
+barplot(pred.val.sex.scen, 
+        main="Predicted values of salary by sex and rank w/ interaction",
+        col=c("lightpink","lightblue"), 
+        legend = rownames(pred.val.sex.scen), beside=TRUE)
+
+```
+
+Paired groups
+
+
+```{r}
+
+dt_1 <- dt.imp.wt %>% filter(scenario=="brown_male_0"|scenario=="brown_male_50")
+dt_2 <- dt.imp.wt %>% filter(scenario=="brown_male_50"|scenario=="brown_male_100")
+dt_3 <- dt.imp.wt %>% filter(scenario=="brown_male_100"|scenario=="white_male_100")
+dt_4 <- dt.imp.wt %>% filter(scenario=="German_male_0"|scenario=="German_male_50")
+dt_5 <- dt.imp.wt %>% filter(scenario=="German_male_50"|scenario=="German_male_100")
+
+
+```
+
+
+
+```{r}
+
+Bm050  = summary(lm(non_accept ~ scenario ,weights = psweight, data = dt_1)); Bm050
+Bm50100  = summary(lm(non_accept ~ scenario, weights = psweight, data = dt_2));Bm50100
+BmWm100  = summary(lm(non_accept ~ scenario, weights = psweight, data = dt_3));BmWm100
+Gm050  = summary(lm(non_accept ~ scenario, weights = psweight, data = dt_4));Gm050
+Gm50100  = summary(lm(non_accept ~ scenario, weights = psweight, data = dt_5));Gm50100
+
+```
+
+
+
+```{r}
+
+Bm050.int  = summary(lm(non_accept ~ I(scenario =='brown_male_0')*SEX ,weights = psweight, data = dt_1)); Bm050.int
+Bm50100.int  = summary(lm(non_accept ~ I(scenario =='brown_male_50')*SEX, weights = psweight, data = dt_2));Bm50100.int
+BmWm100.int  = summary(lm(non_accept ~ I(scenario =='brown_male_100')*SEX, weights = psweight, data = dt_3));BmWm100.int
+Gm050.int  = summary(lm(non_accept ~ I(scenario =='German_male_0')*SEX, weights = psweight, data = dt_4));Gm050.int
+Gm50100.int  = summary(lm(non_accept ~ I(scenario =='German_male_50')*SEX, weights = psweight, data = dt_5));Gm50100.int
+
+
+```
+
+
+
+```{r}
+
+Bm050.int  = summary(lm(non_accept ~ I(scenario =='brown_male_0'):SEX ,weights = psweight, data = dt_1)); Bm050.int
+Bm50100.int  = summary(lm(non_accept ~ I(scenario =='brown_male_50'):SEX, weights = psweight, data = dt_2));Bm50100.int
+BmWm100.int  = summary(lm(non_accept ~ I(scenario =='brown_male_100'):SEX, weights = psweight, data = dt_3));BmWm100.int
+Gm050.int  = summary(lm(non_accept ~ I(scenario =='German_male_0'):SEX, weights = psweight, data = dt_4));Gm050.int
+Gm50100.int  = summary(lm(non_accept ~ I(scenario =='German_male_50'):SEX, weights = psweight, data = dt_5));Gm50100.int
+
+
+```
+
+
+
+```{r}
+
+# library(modelsummary)
+# library(gt)
+
+# build table with `modelsummary` 
+
+cm <- c('(Intercept)' = '(Intercept)',
+        'I(scenario == "brown_male_0")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_0")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_0")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "brown_male_50")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_50")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_50")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "brown_male_100")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_100")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_100")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "German_male_0")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "German_male_0")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "German_male_0")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "German_male_50")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "German_male_50")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "German_male_50")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants')
+          
+         
+cap <- 'Non Acceptance across the Change of Conditions and Gender of Respondants'
+
+
+models <- list(Bm050.int, Bm50100.int, BmWm100.int, Gm050.int, Gm50100.int)
+tab_1 <- modelsummary(models,  
+                output = "gt",
+                coef_map = cm, stars = TRUE, 
+                title = cap, gof_omit = 'IC|Log|Adj') 
+
+
+
+
+# customize table with `gt`
+
+gt_ob<-tab_1 %>%
+
+    # column labels
+    tab_spanner(label = 'Non-white refugee male 0% and 50%', columns = 2) %>%
+    tab_spanner(label = 'Non-white refugee male 50% and 100%', columns = 3) %>%
+    tab_spanner(label = 'Non-white male 100% and white refugee male 100%', columns = 4) %>%
+    tab_spanner(label = 'German male\n0% and 50%', columns = 5) %>%
+    tab_spanner(label = 'German male 50% and 100%', columns = 6) %>%
+
+    # footnote
+    tab_footnote(footnote = md("Reference: Female Respndants"),
+                 locations = cells_body(rows = 3, columns = 1)) %>%
+    
+    # text and background color
+    tab_style(style = cell_text(color = 'red'),
+              locations = cells_body(rows = 3)) %>%
+    tab_style(style = cell_fill(color = 'lightblue'),
+              locations = cells_body(rows = 5))%>%
+    tab_style(style = cell_fill(color = 'lightblue'),
+              locations = cells_body(rows = 7)) %>%
+    
+  # increase the width of each column
+    cols_width(everything() ~ px(160))%>% 
+  # increase the height of each row
+    tab_options(data_row.padding = px(3))
+
+```
+
+```{r}
+
+gtsave(gt_ob, "U:/sex_ratio/output/tab_S16.png", expand = 10)
+
+```
+
+
+
+```{r}
+
+Bm050.int.j  = summary(lm(threat_job ~ I(scenario =='brown_male_0'):SEX ,weights = psweight, data = dt_1)); Bm050.int.j
+Bm50100.int.j  = summary(lm(threat_job ~ I(scenario =='brown_male_50'):SEX, weights = psweight, data = dt_2));Bm50100.int.j
+BmWm100.int.j  = summary(lm(threat_job ~ I(scenario =='brown_male_100'):SEX, weights = psweight, data = dt_3));BmWm100.int.j
+Gm050.int.j  = summary(lm(threat_job ~ I(scenario =='German_male_0'):SEX, weights = psweight, data = dt_4));Gm050.int.j
+Gm50100.int.j  = summary(lm(threat_job ~ I(scenario =='German_male_50'):SEX, weights = psweight, data = dt_5));Gm50100.int.j
+
+
+```
+
+
+
+```{r}
+
+# library(modelsummary)
+# library(gt)
+
+# build table with `modelsummary` 
+
+cm <- c('(Intercept)' = '(Intercept)',
+        'I(scenario == "brown_male_0")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_0")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_0")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "brown_male_50")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_50")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_50")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "brown_male_100")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_100")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_100")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "German_male_0")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "German_male_0")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "German_male_0")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "German_male_50")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "German_male_50")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "German_male_50")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants')
+          
+         
+cap <- 'Percieved Threats to Job Competition across the Change of Conditions and Gender of Respondants'
+
+
+models_2 <- list(Bm050.int.j, Bm50100.int.j, BmWm100.int.j, Gm050.int.j, Gm50100.int.j)
+tab_2 <- modelsummary(models_2,  
+                output = "gt",
+                coef_map = cm, stars = TRUE, 
+                title = cap, gof_omit = 'IC|Log|Adj') 
+
+
+
+
+# customize table with `gt`
+
+gt_ob_2<-tab_2 %>%
+
+    # column labels
+    tab_spanner(label = 'Non-white refugee male 0% and 50%', columns = 2) %>%
+    tab_spanner(label = 'Non-white refugee male 50% and 100%', columns = 3) %>%
+    tab_spanner(label = 'Non-white male 100% and white refugee male 100%', columns = 4) %>%
+    tab_spanner(label = 'German male\n0% and 50%', columns = 5) %>%
+    tab_spanner(label = 'German male 50% and 100%', columns = 6) %>%
+
+    # footnote
+    tab_footnote(footnote = md("Reference: Female Respndants"),
+                 locations = cells_body(rows = 3, columns = 1)) %>%
+    
+    # text and background color
+    tab_style(style = cell_text(color = 'red'),
+              locations = cells_body(rows = 3)) %>%
+    tab_style(style = cell_fill(color = 'lightblue'),
+              locations = cells_body(rows = 5))%>%
+    tab_style(style = cell_fill(color = 'lightblue'),
+              locations = cells_body(rows = 7)) %>%
+    
+  # increase the width of each column
+    cols_width(everything() ~ px(160))%>% 
+  # increase the height of each row
+    tab_options(data_row.padding = px(3))
+
+```
+
+```{r}
+
+gtsave(gt_ob_2, "U:/sex_ratio/output/tab_S17.png", expand = 10)
+
+```
+
+
+
+```{r}
+
+Bm050.int.m = summary(lm(threat_mate ~ I(scenario =='brown_male_0'):SEX ,weights = psweight, data = dt_1)); Bm050.int.m
+Bm50100.int.m = summary(lm(threat_mate ~ I(scenario =='brown_male_50'):SEX, weights = psweight, data = dt_2));Bm50100.int.m
+BmWm100.int.m = summary(lm(threat_mate ~ I(scenario =='brown_male_100'):SEX, weights = psweight, data = dt_3));BmWm100.int.m
+Gm050.int.m = summary(lm(threat_mate ~ I(scenario =='German_male_0'):SEX, weights = psweight, data = dt_4));Gm050.int.m
+Gm50100.int.m = summary(lm(threat_mate ~ I(scenario =='German_male_50'):SEX, weights = psweight, data = dt_5));Gm50100.int.m
+
+
+```
+
+
+
+```{r}
+
+# library(modelsummary)
+# library(gt)
+
+# build table with `modelsummary` 
+
+cm <- c('(Intercept)' = '(Intercept)',
+        'I(scenario == "brown_male_0")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_0")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_0")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "brown_male_50")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_50")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_50")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "brown_male_100")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_100")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_100")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "German_male_0")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "German_male_0")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "German_male_0")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "German_male_50")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "German_male_50")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "German_male_50")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants')
+          
+         
+cap <- 'Percieved Threats to Mate Competition across the Change of Conditions and Gender of Respondants'
+
+
+models_3 <- list(Bm050.int.m, Bm50100.int.m, BmWm100.int.m, Gm050.int.m, Gm50100.int.m)
+tab_3 <- modelsummary(models_3,  
+                output = "gt",
+                coef_map = cm, stars = TRUE, 
+                title = cap, gof_omit = 'IC|Log|Adj') 
+
+
+
+
+# customize table with `gt`
+
+gt_ob_3 <-tab_3 %>%
+
+    # column labels
+    tab_spanner(label = 'Non-white refugee male 0% and 50%', columns = 2) %>%
+    tab_spanner(label = 'Non-white refugee male 50% and 100%', columns = 3) %>%
+    tab_spanner(label = 'Non-white male 100% and white refugee male 100%', columns = 4) %>%
+    tab_spanner(label = 'German male\n0% and 50%', columns = 5) %>%
+    tab_spanner(label = 'German male 50% and 100%', columns = 6) %>%
+
+    # footnote
+    tab_footnote(footnote = md("Reference: Female Respndants"),
+                 locations = cells_body(rows = 3, columns = 1)) %>%
+    
+    # text and background color
+    tab_style(style = cell_text(color = 'red'),
+              locations = cells_body(rows = 3)) %>%
+    tab_style(style = cell_fill(color = 'lightblue'),
+              locations = cells_body(rows = 5))%>%
+    tab_style(style = cell_fill(color = 'lightblue'),
+              locations = cells_body(rows = 7)) %>%
+    
+  # increase the width of each column
+    cols_width(everything() ~ px(160))%>% 
+  # increase the height of each row
+    tab_options(data_row.padding = px(3))
+
+```
+
+```{r}
+
+gtsave(gt_ob_3, "U:/sex_ratio/output/tab_S18.png", expand = 10)
+
+```
+
+
+
+
+```{r}
+
+Bm050.int.s = summary(lm(threat_safety ~ I(scenario =='brown_male_0'):SEX ,weights = psweight, data = dt_1)); Bm050.int.s
+Bm50100.int.s = summary(lm(threat_safety ~ I(scenario =='brown_male_50'):SEX, weights = psweight, data = dt_2));Bm50100.int.s
+BmWm100.int.s = summary(lm(threat_safety ~ I(scenario =='brown_male_100'):SEX, weights = psweight, data = dt_3));BmWm100.int.s
+Gm050.int.s = summary(lm(threat_safety ~ I(scenario =='German_male_0'):SEX, weights = psweight, data = dt_4));Gm050.int.s
+Gm50100.int.s = summary(lm(threat_safety ~ I(scenario =='German_male_50'):SEX, weights = psweight, data = dt_5));Gm50100.int.s
+
+
+```
+
+
+
+```{r}
+
+# library(modelsummary)
+# library(gt)
+
+# build table with `modelsummary` 
+
+cm <- c('(Intercept)' = '(Intercept)',
+        'I(scenario == "brown_male_0")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_0")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_0")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "brown_male_50")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_50")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_50")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "brown_male_100")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_100")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_100")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "German_male_0")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "German_male_0")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "German_male_0")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "German_male_50")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "German_male_50")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "German_male_50")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants')
+          
+         
+cap <- 'Percieved Threats to Safety across the Change of Conditions and Gender of Respondants'
+
+
+models_4 <- list(Bm050.int.s, Bm50100.int.s, BmWm100.int.s, Gm050.int.s, Gm50100.int.s)
+tab_4 <- modelsummary(models_4,  
+                output = "gt",
+                coef_map = cm, stars = TRUE, 
+                title = cap, gof_omit = 'IC|Log|Adj') 
+
+
+
+
+# customize table with `gt`
+
+gt_ob_4 <-tab_4 %>%
+
+    # column labels
+    tab_spanner(label = 'Non-white refugee male 0% and 50%', columns = 2) %>%
+    tab_spanner(label = 'Non-white refugee male 50% and 100%', columns = 3) %>%
+    tab_spanner(label = 'Non-white male 100% and white refugee male 100%', columns = 4) %>%
+    tab_spanner(label = 'German male\n0% and 50%', columns = 5) %>%
+    tab_spanner(label = 'German male 50% and 100%', columns = 6) %>%
+
+    # footnote
+    tab_footnote(footnote = md("Reference: Female Respndants"),
+                 locations = cells_body(rows = 3, columns = 1)) %>%
+    
+    # text and background color
+    tab_style(style = cell_text(color = 'red'),
+              locations = cells_body(rows = 3)) %>%
+    tab_style(style = cell_fill(color = 'lightblue'),
+              locations = cells_body(rows = 5))%>%
+    tab_style(style = cell_fill(color = 'lightblue'),
+              locations = cells_body(rows = 7)) %>%
+    
+  # increase the width of each column
+    cols_width(everything() ~ px(160))%>% 
+  # increase the height of each row
+    tab_options(data_row.padding = px(3))
+
+```
+
+```{r}
+
+gtsave(gt_ob_4, "U:/sex_ratio/output/tab_S20.png", expand = 10)
+
+```
+
+
+
+```{r}
+Bm050.int.c = summary(lm(threat_culture ~ I(scenario =='brown_male_0'):SEX ,weights = psweight, data = dt_1)); Bm050.int.c
+Bm50100.int.c = summary(lm(threat_culture ~ I(scenario =='brown_male_50'):SEX, weights = psweight, data = dt_2));Bm50100.int.c
+BmWm100.int.c = summary(lm(threat_culture ~ I(scenario =='brown_male_100'):SEX, weights = psweight, data = dt_3));BmWm100.int.c
+
+```
+
+
+
+```{r}
+
+# library(modelsummary)
+# library(gt)
+
+# build table with `modelsummary` 
+
+cm <- c('(Intercept)' = '(Intercept)',
+        'I(scenario == "brown_male_0")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_0")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_0")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "brown_male_50")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_50")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_50")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "brown_male_100")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "brown_male_100")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "brown_male_100")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "German_male_0")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "German_male_0")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "German_male_0")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants',
+        'I(scenario == "German_male_50")TRUE:SEXMale'= 'Effect of Male Respndants (Within the Same Condition)',
+        'I(scenario == "German_male_50")FALSE:SEXFemale'= 'Effect of Condition Changes (within Female Respondants)',
+        'I(scenario == "German_male_50")FALSE:SEXMale'='Interation of Condition Changes and Male Respndants')
+          
+         
+cap <- 'Percieved Threats to German Culture across the Change of Conditions and Gender of Respondants'
+
+
+models_5 <- list(Bm050.int.c, Bm50100.int.c, BmWm100.int.c)
+tab_5 <- modelsummary(models_5,  
+                output = "gt",
+                coef_map = cm, stars = TRUE, 
+                title = cap, gof_omit = 'IC|Log|Adj') 
+
+
+
+
+# customize table with `gt`
+
+gt_ob_5 <-tab_5 %>%
+
+    # column labels
+    tab_spanner(label = 'Non-white refugee male 0% and 50%', columns = 2) %>%
+    tab_spanner(label = 'Non-white refugee male 50% and 100%', columns = 3) %>%
+    tab_spanner(label = 'Non-white male 100% and white refugee male 100%', columns = 4) %>%
+
+    # footnote
+    tab_footnote(footnote = md("Reference: Female Respndants"),
+                 locations = cells_body(rows = 3, columns = 1)) %>%
+    
+    # text and background color
+    tab_style(style = cell_text(color = 'red'),
+              locations = cells_body(rows = 3)) %>%
+    tab_style(style = cell_fill(color = 'lightblue'),
+              locations = cells_body(rows = 5))%>%
+    tab_style(style = cell_fill(color = 'lightblue'),
+              locations = cells_body(rows = 7)) %>%
+    
+  # increase the width of each column
+    cols_width(everything() ~ px(160))%>% 
+  # increase the height of each row
+    tab_options(data_row.padding = px(3))
+
+```
+
+```{r}
+
+gtsave(gt_ob_5, "U:/sex_ratio/output/tab_S19.png", expand = 10)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,2011 @@
+---
+title: "sex_ratio_w1_w2_analysis_supplementary_material_A_B"
+author: "Chia-Jung Tsai"
+date: "2023-11-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(stringr)
+library(RColorBrewer)
+library(ggpubr)
+library(Hmisc)
+library(effsize)
+library(stringr)
+library(gt)
+library(data.table)
+library(rstatix) #Pairwise t test
+
+```
+
+
+
+## A.6 Sample weights and descriptive statistics
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+
+dt_for_sm <- readr::read_csv("Data/ATRP_imputed_pswt_v2.csv") # the data set with the bigger sale of weight on AGE (=AGE_2)
+dt_for_sm <- subset(dt_for_sm, select = -c(...1)) # delete the weird column of "...1" from csv format
+
+```
+
+
+
+```{r}
+dt_for_sm$scenario <- factor(dt_for_sm$equation,
+levels = c(1,2,3,4,5,6,7),
+labels = c("brown_male_0", "brown_male_50", "brown_male_100", "white_male_100", "German_male_0", "German_male_50", "German_male_100"))
+
+dt_for_sm$CONT <- factor(dt_for_sm$CONT,
+levels = c(0,1,2,3),
+labels = c("Never", " Once", "A few times","Several times"))
+
+dt_for_sm$REFDE <- factor(dt_for_sm$REFDE,
+levels = c(1,2,3,4),
+labels = c("lower than 1%", "1.5%", "3%","higher than 5%"))
+
+dt_for_sm$REFSTA <- factor(dt_for_sm$REFSTA,
+levels = c(1,2,3,4),
+labels = c("lower than 1%", "1.5%", "3%","higher than 5%"))
+
+dt_for_sm$REFNHB <- factor(dt_for_sm$REFNHB,
+levels = c(1,2,3,4),
+labels = c("lower than 1%", "1.5%", "3%","higher than 5%"))
+
+dt_for_sm$SEXDE <- factor(dt_for_sm$SEXDE,
+levels = c(1,2,3,4,5),
+labels = c("women>>men", "women>men", "women=men","women<men","women<<men"))
+
+dt_for_sm$SEXSTA <- factor(dt_for_sm$SEXSTA,
+levels = c(1,2,3,4,5),
+labels = c("women>>men", "women>men", "women=men","women<men","women<<men"))
+
+dt_for_sm$SEXNHB <- factor(dt_for_sm$SEXNHB,
+levels = c(1,2,3,4,5),
+labels = c("women>>men", "women>men", "women=men","women<men","women<<men"))
+
+dt_for_sm$AGE <- factor(dt_for_sm$AGE,
+levels = c(1,2,3,4,5,6,7,8,9,10),
+labels = c("18-24", "25-29", "30-34","35-39","40-44","45-49","50-54","55-59","60-64","Over65"))
+
+
+dt_for_sm$AGE_2 <- factor(dt_for_sm$AGE_2,
+levels = c(1,2,3,4,5),
+labels = c("18-29", "30-39","40-49","50-59","60-64"))
+
+
+dt_for_sm$SEX <- factor(dt_for_sm$SEX,
+levels = c(0,1,2),
+labels = c("Male", "Female", "Diverse"))
+
+dt_for_sm$origin<- ifelse(dt_for_sm$CTR=="DE","Germany","Not Germany") 
+
+dt_for_sm$DE <- factor(dt_for_sm$DE,
+levels = c(0,1),
+labels = c("Not In Germany", "Germany"))
+
+dt_for_sm$BUNDESLAND <- factor(dt_for_sm$BUNDESLAND,
+levels = c("BW","BY","BE","BB","HB","HH","HE","NI",
+           "MV","NW","RP","SL","SN","ST","SH","TH"),
+labels = c("Baden-Württemberg",
+           "Bayern",
+           "Berlin",
+           "Brandenburg",
+           "Bremen",
+           "Hamburg",
+           "Hessen", 
+           "Niedersachsen", 
+           "Mecklenburg-Vorpommern", 
+           "Nordrhein-Westfalen", 
+           "Rheinland-Pfalz", 
+           "Saarland", 
+           "Sachsen", 
+           "Sachsen-Anhalt", 
+           "Schleswig-Holstein", 
+           "Thüringen"))
+
+dt_for_sm$BER <- factor(dt_for_sm$BER,
+levels = c(1,2,3,4,5,6,7,8,9,10,11,12),
+labels = c("Mitte",
+           "Friedrichshain-Kreuzberg", 
+           "Neukölln", 
+           "Charlottenburg-Wilmersdorf", 
+           "Spandau", 
+           "Steglitz-Zehlendorf", 
+           "Tempelhof-Schöneberg", 
+           "Reinickendorf", 
+           "Pankow", 
+           "Marzahn-Hellersdorf", 
+           "Lichtenberg", 
+           "Treptow-Köpenick"))
+
+dt_for_sm$JOBSTATUS <- factor(dt_for_sm$JOBSTATUS,
+ levels = c(1,2,3,4,5,6,7,8),
+ labels = c("Paid work", 
+            "School/training",
+            "Unemployed and actively looking for a job",
+            "Unemployed, wanting a job but not actively looking",
+            "Chronically ill or disabled",
+            "Pre-retired/retired/early retired/retired",
+            "Voluntary military service/federal voluntary service/FSJ/FÖJ",
+            "Housework, caring for children or other people"))
+
+dt_for_sm$EDU <- factor(dt_for_sm$EDU,
+ levels = c(1,2,3,4,5),
+ labels = c("No formal education",
+            "Elementary school",
+            "Further school/secondary school",
+            "University education (e.g. Bachelor, Master)",
+            "Graduate studies (e.g. doctorate, medical doctorate"))
+
+dt_for_sm$PRTALSTATUS <- factor(dt_for_sm$PRTALSTATUS,
+ levels = c(1,2,3),
+ labels = c("Yes",
+            "No",
+            "Not applicable"))
+
+dt_for_sm$PLT <- factor(dt_for_sm$PLT,
+levels = c(1,2,3,4,5,6,7,8,9,10),
+labels = c("CDU/CSU",
+           "SPD", 
+           "Buendnis 90/Gruene", 
+           "Die Linke", 
+           "FDP",
+           "NPD/Republikaner/Die Rechte", 
+           "AfD",
+           "Others", 
+           "Did not vote", 
+           "Not qualified to vote"))
+
+
+```
+
+
+
+```{r}
+
+# recode PLT into AfD/non-AfD;recode age into 50/over 50
+
+dt_for_sm <- dt_for_sm %>%
+  mutate(AfD=case_when(
+    PLT=="AfD" ~ "AfD",
+    PLT=="Did not vote"|PLT=="Not qualified to vote" ~ "Not Vote or Not Qualified" ,
+    .default = "Non-AfD",
+  ))
+
+
+dt_for_sm <- dt_for_sm %>%
+  mutate(AGE_50=case_when(
+    AGE_2=="18-29"|AGE_2=="30-39"|AGE_2=="40-49" ~ "18-49",
+    AGE_2=="50-59"|AGE_2=="60-64" ~ "50-64" ,
+  ))
+
+```
+
+
+
+
+
+```{r, echo=FALSE}
+# only 4 of 5 outcomes reversed 
+dt_for_sm <-dt_for_sm%>%
+  mutate_at(c("ATTITUDES", "PCPJOBNHB", "PCPCULNHB","PCPSAFENHB"), 
+            .funs = list(
+              ~case_when( 
+                .==1 ~ 5,
+                .==2 ~ 4,
+                .==3 ~ 3,
+                .==4 ~ 2,
+                .==5 ~ 1,
+                .==6 ~ 0
+                )
+              ))
+
+```
+
+
+
+```{r, echo=FALSE}
+# not reversed 
+dt_for_sm <-dt_for_sm%>%
+  mutate_at("PCPMATENHB", 
+            .funs = list(
+              ~case_when( 
+                .==1 ~ 0,
+                .==2 ~ 1,
+                .==3 ~ 2,
+                .==4 ~ 3,
+                .==5 ~ 4,
+                .==6 ~ 5
+                )
+              ))
+
+```
+
+
+
+```{r}
+# rename outcomes
+dt_for_sm<-dt_for_sm %>% 
+  rename ("non_accept"="ATTITUDES",
+          "threat_job"="PCPJOBNHB", 
+          "threat_mate"="PCPMATENHB", 
+          "threat_culture"="PCPCULNHB",
+          "threat_safety"="PCPSAFENHB")
+
+
+```
+
+
+
+#### Descriptive table - AGE and SEX
+```{r}
+
+# Age
+dt_des <- dt_for_sm %>% select(AGE_2, SEX, psweight) 
+#respondent-level data (only respondents in estimation sample)
+
+dt_des<- data.table(dt_des)
+
+## AGE
+# make categorical age variables
+dt_des[ , age1829 := AGE_2 == "18-29"]
+dt_des[ , age3039 := AGE_2 == "30-39"]
+dt_des[ , age4049 := AGE_2 == "40-49"]
+dt_des[ , age5059 := AGE_2 == "50-59"]
+dt_des[ , age6064 := AGE_2 == "60-64"]
+
+
+# Unweighted
+
+round(dt_des[ , mean(age1829)],4)*100
+round(dt_des[ , mean(age3039)],4)*100 
+round(dt_des[ , mean(age4049)],4)*100 
+round(dt_des[ , mean(age5059)],4)*100 
+round(dt_des[ , mean(age6064)],4)*100 
+
+# Weighted
+
+round(dt_des[ , weighted.mean(age1829, psweight)],4)*100
+round(dt_des[ , weighted.mean(age3039, psweight)],4)*100 
+round(dt_des[ , weighted.mean(age4049, psweight)],4)*100 
+round(dt_des[ , weighted.mean(age5059, psweight)],4)*100 
+round(dt_des[ , weighted.mean(age6064, psweight)],4)*100 
+
+```
+
+```{r}
+##SEX
+dt_des[ , female := SEX == "Female"]
+dt_des[ , male := SEX == "Male"]
+
+# Unweighted
+round(dt_des[ , mean(female)],4)*100
+round(dt_des[ , mean(male)],4)*100 
+
+# Weighted
+round(dt_des[ , weighted.mean(female, psweight)],4)*100
+round(dt_des[ , weighted.mean(male, psweight)],4)*100
+
+```
+
+#### Descriptive table - CTR (country of birth), DE, BUNDESLAND, BER, JOBSTATUS, EDU, PRTALSTATUS, PLT
+```{r}
+
+dt_des_2 <- dt_for_sm %>% select(CTR, DE, BUNDESLAND, BER, JOBSTATUS, EDU, PRTALSTATUS, PLT, psweight) 
+#respondent-level data (only respondents in estimation sample)
+
+dt_des_2 <- data.table(dt_des_2)
+
+## JOBSTATUS- state of live
+dt_des_2[ , PaidWork := JOBSTATUS == "Paid work"]
+dt_des_2[ , SchoolTrain := JOBSTATUS == "School/training"]
+dt_des_2[ , NoJobSearch := JOBSTATUS == "Unemployed and actively looking for a job"]
+dt_des_2[ , NoJobNoSearch := JOBSTATUS == "Unemployed, wanting a job but not actively looking"]
+dt_des_2[ , Sick := JOBSTATUS == "Chronically ill or disabled"]
+dt_des_2[ , Retired := JOBSTATUS == "Pre-retired/retired/early retired/retired"]
+dt_des_2[ , CivilServ := JOBSTATUS == "Voluntary military service/federal voluntary service/FSJ/FÖJ"]
+dt_des_2[ , HouseWork := JOBSTATUS == "Housework, caring for children or other people"]
+
+# Unweighted
+round(dt_des_2[ , mean(PaidWork, na.rm=T)],4)*100
+round(dt_des_2[ , mean(SchoolTrain, na.rm=T)],4)*100 
+round(dt_des_2[ , mean(NoJobSearch, na.rm=T)],4)*100
+round(dt_des_2[ , mean(NoJobNoSearch, na.rm=T)],4)*100 
+round(dt_des_2[ , mean(Sick, na.rm=T)],4)*100
+round(dt_des_2[ , mean(Retired, na.rm=T)],4)*100 
+round(dt_des_2[ , mean(CivilServ, na.rm=T)],4)*100
+round(dt_des_2[ , mean(HouseWork, na.rm=T)],4)*100 
+
+# Weighted
+round(dt_des_2[ , weighted.mean(PaidWork, psweight)],4)*100
+round(dt_des_2[ , weighted.mean(SchoolTrain, psweight)],4)*100 
+round(dt_des_2[ , weighted.mean(NoJobSearch, psweight)],4)*100
+round(dt_des_2[ , weighted.mean(NoJobNoSearch, psweight)],4)*100 
+round(dt_des_2[ , weighted.mean(Sick, psweight)],4)*100
+round(dt_des_2[ , weighted.mean(Retired, psweight)],4)*100 
+round(dt_des_2[ , weighted.mean(CivilServ, psweight)],4)*100
+round(dt_des_2[ , weighted.mean(HouseWork, psweight)],4)*100 
+
+
+```
+
+```{r}
+
+## EDU- education
+dt_des_2[ , NoEdu := EDU == "No formal education"]
+dt_des_2[ , PrimEdu := EDU == "Elementary school"]
+dt_des_2[ , SecoEdu := EDU == "Further school/secondary school"]
+dt_des_2[ , UniEdu := EDU == "University education (e.g. Bachelor, Master)"]
+dt_des_2[ , GradEdu := EDU == "Graduate studies (e.g. doctorate, medical doctorate"]
+
+# Unweighted
+round(dt_des_2[ , mean(NoEdu, na.rm=T)],4)*100
+round(dt_des_2[ , mean(PrimEdu, na.rm=T)],4)*100 
+round(dt_des_2[ , mean(SecoEdu, na.rm=T)],4)*100
+round(dt_des_2[ , mean(UniEdu, na.rm=T)],4)*100 
+round(dt_des_2[ , mean(GradEdu, na.rm=T)],4)*100
+
+# Weighted
+round(dt_des_2[ , weighted.mean(NoEdu, psweight)],4)*100
+round(dt_des_2[ , weighted.mean(PrimEdu, psweight)],4)*100 
+round(dt_des_2[ , weighted.mean(SecoEdu, psweight)],4)*100
+round(dt_des_2[ , weighted.mean(UniEdu, psweight)],4)*100 
+round(dt_des_2[ , weighted.mean(GradEdu, psweight)],4)*100
+
+```
+
+
+```{r}
+
+## PRTALSTATUS- parental status
+dt_des_2[ , Withchild := PRTALSTATUS == "Yes"]
+dt_des_2[ , withoutchild := PRTALSTATUS == "No"]
+dt_des_2[ , notappli := PRTALSTATUS == "Not applicable"]
+
+# Unweighted
+round(dt_des_2[ , mean(Withchild, na.rm=T)],4)*100
+round(dt_des_2[ , mean(withoutchild, na.rm=T)],4)*100 
+round(dt_des_2[ , mean(notappli, na.rm=T)],4)*100
+
+# Weighted
+round(dt_des_2[ , weighted.mean(Withchild, psweight)],4)*100
+round(dt_des_2[ , weighted.mean(withoutchild, psweight)],4)*100 
+round(dt_des_2[ , weighted.mean(notappli, psweight)],4)*100
+
+```
+
+
+
+```{r}
+## CTR- country of birth
+dt_des_2[ , CTRde := CTR == 'DE']
+dt_des_2[ , CTRothers := CTR !='DE']
+
+# Unweighted
+round(dt_des_2[ , mean(CTRde)],4)*100
+round(dt_des_2[ , mean(CTRothers)],4)*100 
+
+# Weighted
+round(dt_des_2[ , weighted.mean(CTRde,psweight)],4)*100
+round(dt_des_2[ , weighted.mean(CTRothers,psweight)],4)*100 
+
+```
+
+```{r}
+## DE- country of live
+dt_des_2[ , liveDE := DE == "Germany"]
+dt_des_2[ , liveOthers := DE =="Not In Germany"]
+
+# Unweighted
+round(dt_des_2[ , mean(liveDE, na.rm=T)],4)*100
+round(dt_des_2[ , mean(liveOthers, na.rm=T)],4)*100 
+
+# Weighted
+round(dt_des_2[ , weighted.mean(liveDE, psweight)],4)*100
+round(dt_des_2[ , weighted.mean(liveOthers, psweight)],4)*100 
+
+```
+
+```{r}
+## BUNDESLAND- state of live
+dt_des_2[ , liveMV := BUNDESLAND == 'Mecklenburg-Vorpommern']
+dt_des_2[ , liveNotMV := BUNDESLAND != 'Mecklenburg-Vorpommern']
+
+# Unweighted
+round(dt_des_2[ , mean(liveMV, na.rm=T)],4)*100
+round(dt_des_2[ , mean(liveNotMV, na.rm=T)],4)*100 
+
+# Weighted
+round(dt_des_2[ , weighted.mean(liveMV, psweight)],4)*100
+round(dt_des_2[ , weighted.mean(liveNotMV, psweight)],4)*100 
+
+```
+
+```{r}
+## PLT- Party ones supported
+dt_des_2[ , CDUCSU := PLT == "CDU/CSU"]
+dt_des_2[ , SPD := PLT == "SPD"]
+dt_des_2[ , Gr90 := PLT == "Buendnis 90/Gruene"]
+dt_des_2[ , Left := PLT == "Die Linke"]
+dt_des_2[ , FDP := PLT == "FDP"]
+dt_des_2[ , NPDRepubRight := PLT == "NPD/Republikaner/Die Rechte"]
+dt_des_2[ , Afd := PLT == "AfD"]
+dt_des_2[ , PLTOthers := PLT == "Others"]
+dt_des_2[ , NotVote := PLT == "Did not vote"]
+dt_des_2[ , NotQualifyVote := PLT == "Not qualified to vote"]
+
+# Unweighted
+round(dt_des_2[ , mean(CDUCSU, na.rm=T)],4)*100
+round(dt_des_2[ , mean(SPD, na.rm=T)],4)*100 
+round(dt_des_2[ , mean(Gr90, na.rm=T)],4)*100
+round(dt_des_2[ , mean(Left, na.rm=T)],4)*100 
+round(dt_des_2[ , mean(FDP, na.rm=T)],4)*100
+round(dt_des_2[ , mean(NPDRepubRight, na.rm=T)],4)*100 
+round(dt_des_2[ , mean(Afd, na.rm=T)],4)*100
+round(dt_des_2[ , mean(PLTOthers, na.rm=T)],4)*100 
+round(dt_des_2[ , mean(NotVote, na.rm=T)],4)*100
+round(dt_des_2[ , mean(NotQualifyVote, na.rm=T)],4)*100 
+
+# Weighted
+round(dt_des_2[ , weighted.mean(CDUCSU, psweight)],4)*100
+round(dt_des_2[ , weighted.mean(SPD, psweight)],4)*100 
+round(dt_des_2[ , weighted.mean(Gr90, psweight)],4)*100
+round(dt_des_2[ , weighted.mean(Left, psweight)],4)*100 
+round(dt_des_2[ , weighted.mean(FDP, psweight)],4)*100
+round(dt_des_2[ , weighted.mean(NPDRepubRight, psweight)],4)*100 
+round(dt_des_2[ , weighted.mean(Afd, psweight)],4)*100
+round(dt_des_2[ , weighted.mean(PLTOthers, psweight)],4)*100 
+round(dt_des_2[ , weighted.mean(NotVote, psweight)],4)*100
+round(dt_des_2[ , weighted.mean(NotQualifyVote, psweight)],4)*100 
+
+
+```
+
+## A.7 Sample Weights across conditions
+
+```{r}
+table(dt_for_sm$scenario)
+questionr::wtd.table(x=dt_for_sm$scenario, weights = dt_for_sm$psweight)
+
+```
+
+```{r}
+table(dt_for_sm$AGE_2, dt_for_sm$SEX)
+questionr::wtd.table(x=dt_for_sm$AGE_2, y=dt_for_sm$SEX, weights = dt_for_sm$psweight)
+
+```
+
+
+
+## B.1 Mean Scores and Cohen's D Scores for Figure 1 and Figure 2 
+
+```{r}
+
+# dt_for_sm <- readr::read_csv("Data/ATRP_imputed_pswt_cleaned_for_plots.csv") 
+# dt_for_sm <- subset(dt_for_sm, select = -c(...1)) # delete the weird column of "...1" from csv format
+
+```
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+
+Non_accept <- dt_for_sm %>% 
+  group_by(scenario)%>%
+  summarise(mean=weighted.mean(non_accept, psweight),
+            sd=sqrt(wtd.var(non_accept, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(threat_type="Non-Acceptance")
+
+Job_com <- dt_for_sm %>% 
+  group_by(scenario)%>%
+  summarise(mean=weighted.mean(threat_job, psweight),
+            sd=sqrt(wtd.var(threat_job, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(threat_type="Threats to Job Competition")
+
+
+Mate_com <- dt_for_sm %>% 
+  group_by(scenario)%>%
+  summarise(mean=weighted.mean(threat_mate, psweight),
+            sd=sqrt(wtd.var(threat_mate, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(threat_type="Threats to Mate Competition")
+
+
+Cul_thr <- dt_for_sm %>% 
+  group_by(scenario)%>%
+  summarise(mean=weighted.mean(threat_culture, psweight),
+            sd=sqrt(wtd.var(threat_culture, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(threat_type="Threats to German Culture")
+
+
+Safe_thr <- dt_for_sm %>% 
+  group_by(scenario)%>%
+  summarise(mean=weighted.mean(threat_safety, psweight),
+            sd=sqrt(wtd.var(threat_safety, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(threat_type="Threats to Safety")
+
+```
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+
+Thr <- rbind(Non_accept,Job_com, Mate_com, Cul_thr, Safe_thr)
+
+Thr$scenario <- factor(Thr$scenario, 
+                       levels = c("brown_male_0", 
+                                  "brown_male_50", 
+                                  "brown_male_100", 
+                                  "white_male_100", 
+                                  "German_male_0", 
+                                  "German_male_50", 
+                                  "German_male_100"), 
+                       labels= c("Non-White Refugee Male 0%",
+                                 "Non-White Refugee Male 50%",
+                                 "Non-White Refugee Male 100%",
+                                 "White Refugee Male 100%",
+                                 "German Male 0%",
+                                 "German Male 50%", 
+                                 "German Male 100%"), ordered = T)
+
+
+
+Thr$scenario <- ordered(Thr$scenario, levels=c("Non-White Refugee Male 0%","Non-White Refugee Male 50%", "Non-White Refugee Male 100%", "White Refugee Male 100%","German Male 0%","German Male 50%","German Male 100%"))
+
+print(Thr, n=30)
+
+mean.tab <- gt(data = Thr) %>% 
+  tab_header(
+    title = "Weighted Mean Scores by 7 Conditions")%>%
+  tab_source_note("confidence Level: 0.95") 
+
+
+# openxlsx::write.xlsx(mean.tab, file = "output/mean_tab_S12.xlsx")
+
+```
+
+#### weighted n in every coonditions
+```{r,echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+questionr::wtd.table(x=dt_for_sm$scenario, weights = dt_for_sm$psweight)
+# brown_male_0   brown_male_50  brown_male_100  white_male_100   German_male_0  German_male_50 German_male_100 
+#     53.15181        65.07594        58.36774        36.06186        51.52012        50.67903        61.14349 
+```
+
+#### weighted cohen's d (standarized mean difference)  for non-acceptance
+
+> mean and sd see the Thr_ref
+
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+
+### weighted cohen's d (standarized mean difference)  for Non-Acceptance
+# Non-White Refugee Male 0% and 50%
+cd.a.1<- esc::esc_mean_sd(grp1m=3.447725, grp2m=3.487258, grp1sd = 1.614212, grp2sd =1.702676, grp1n = 53.15181, grp2n = 65.07594)
+# Non-White Refugee Male 50% and 100%
+cd.a.2<-esc::esc_mean_sd(grp1m=3.487258, grp2m=4.206071, grp1sd = 1.702676, grp2sd =	1.253071, grp1n = 65.07594, grp2n = 58.36774)
+# Non-White Refugee Male 0% and 100%
+cd.a.3<-esc::esc_mean_sd(grp1m=3.447725, grp2m=4.206071, grp1sd =1.614212 , grp2sd =1.253071, grp1n = 53.15181 , grp2n = 58.36774)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.a.4<-esc::esc_mean_sd(grp1m=4.206071 , grp2m= 3.371250, grp1sd = 1.253071, grp2sd = 1.812569, grp1n = 58.36774 , grp2n = 36.06186 )
+# Non-White Refugee Male 0% and German Male 0% 
+cd.a.5<- esc::esc_mean_sd(grp1m=3.447725 , grp2m=1.632887, grp1sd =1.614212, grp2sd =2.055217, grp1n = 53.15181, grp2n = 51.52012 )
+# Non-White Refugee Male 50% and German Male 50%
+cd.a.6<-esc::esc_mean_sd(grp1m=3.487258 , grp2m=1.386503 , grp1sd =1.702676 , grp2sd =1.844438 , grp1n = 65.07594 , grp2n = 50.67903 )
+# Non-White Refugee Male 100% and German Male 100%
+cd.a.7<-esc::esc_mean_sd(grp1m=4.206071 , grp2m=1.628405, grp1sd =1.253071 , grp2sd =1.697736, grp1n = 58.36774, grp2n = 61.14349)
+
+```
+
+
+
+```{r}
+
+### weighted cohen's d (standarized mean difference)  for job competition
+# Non-White Refugee Male 0% and 50%
+cd.j.1<- esc::esc_mean_sd(grp1m=3.642811, grp2m=3.672004, grp1sd = 1.753608, grp2sd =1.694126, grp1n = 53.15181, grp2n = 65.07594)
+# Non-White Refugee Male 50% and 100%
+cd.j.2 <-esc::esc_mean_sd(grp1m=3.672004, grp2m=3.798854, grp1sd = 1.694126, grp2sd =	1.897765, grp1n = 65.07594, grp2n = 58.36774)
+# Non-White Refugee Male 0% and 100%
+cd.j.3<-esc::esc_mean_sd(grp1m=3.642811, grp2m=3.798854, grp1sd = 1.753608, grp2sd =1.897765, grp1n = 53.15181 , grp2n = 58.36774)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.j.4<-esc::esc_mean_sd(grp1m=3.798854 , grp2m=3.459637, grp1sd =1.897765, grp2sd =1.917778, grp1n = 58.36774 , grp2n = 36.06186)
+# Non-White Refugee Male 0% and German Male 0% 
+cd.j.5<- esc::esc_mean_sd(grp1m=3.642811 , grp2m=2.868380, grp1sd =1.753608, grp2sd =1.947903, grp1n = 53.15181, grp2n = 51.52012)
+# Non-White Refugee Male 50% and German Male 50%
+cd.j.6<-esc::esc_mean_sd(grp1m=3.672004 , grp2m=3.653421, grp1sd =1.694126 , grp2sd =1.750518, grp1n = 65.07594 , grp2n = 50.67903)
+# Non-White Refugee Male 100% and German Male 100%
+cd.j.7<-esc::esc_mean_sd(grp1m=3.798854 , grp2m= 3.177904, grp1sd =1.897765 , grp2sd =1.731833, grp1n = 58.36774, grp2n = 61.14349)
+
+```
+
+```{r}
+
+### weighted cohen's d (standarized mean difference)  for mate competition
+# Non-White Refugee Male 0% and 50%
+cd.m.1<- esc::esc_mean_sd(grp1m=2.887025, grp2m=2.722132, grp1sd = 1.672813, grp2sd =1.646538, grp1n = 53.15181, grp2n = 65.07594)
+# Non-White Refugee Male 50% and 100%
+cd.m.2<-esc::esc_mean_sd(grp1m=2.722132, grp2m=3.176965, grp1sd = 1.646538, grp2sd =1.912212, grp1n = 65.07594, grp2n = 58.36774)
+# Non-White Refugee Male 0% and 100%
+cd.m.3<-esc::esc_mean_sd(grp1m=2.887025, grp2m=3.176965, grp1sd = 1.672813 , grp2sd = 1.912212,  grp1n = 53.15181 , grp2n = 58.36774)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.m.4<-esc::esc_mean_sd(grp1m=3.176965 , grp2m=2.955679, grp1sd =1.912212 , grp2sd =1.739440, grp1n = 58.36774 , grp2n = 36.06186)
+# Non-White Refugee Male 0% and German Male 0% 
+cd.m.5<- esc::esc_mean_sd(grp1m=2.887025, grp2m= 2.151354, grp1sd =1.672813 , grp2sd =1.533271, grp1n = 53.15181, grp2n = 51.52012)
+# Non-White Refugee Male 50% and German Male 50%
+cd.m.6<-esc::esc_mean_sd(grp1m=2.722132 , grp2m=1.966744, grp1sd =1.646538 , grp2sd =	1.465553, grp1n = 65.07594 , grp2n = 50.67903)
+# Non-White Refugee Male 100% and German Male 100%
+cd.m.7<-esc::esc_mean_sd(grp1m=3.176965 , grp2m=2.209754, grp1sd =1.912212 , grp2sd =1.520748, grp1n = 58.36774, grp2n = 61.14349)
+
+
+```
+
+```{r}
+### weighted cohen's d (standarized mean difference)  for safety
+# Non-White Refugee Male 0% and 50%
+cd.s.1<- esc::esc_mean_sd(grp1m=3.817450, grp2m=3.635870, grp1sd = 1.485616, grp2sd =1.520875, grp1n = 53.15181, grp2n = 65.07594)
+# Non-White Refugee Male 50% and 100%
+cd.s.2<-esc::esc_mean_sd(grp1m=3.635870, grp2m=4.457362, grp1sd = 1.520875, grp2sd = 1.093133, grp1n = 65.07594, grp2n = 58.36774)
+# Non-White Refugee Male 0% and 100%
+cd.s.3<-esc::esc_mean_sd(grp1m=3.817450, grp2m=4.457362, grp1sd =1.485616, grp2sd = 1.093133,  grp1n = 53.15181 , grp2n = 58.36774)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.s.4<-esc::esc_mean_sd(grp1m=4.457362 , grp2m= 3.723793, grp1sd =1.093133 , grp2sd =1.582926, grp1n = 58.36774 , grp2n = 36.06186)
+# Non-White Refugee Male 0% and German Male 0% 
+cd.s.5<- esc::esc_mean_sd(grp1m=3.817450 , grp2m=1.908091, grp1sd = 1.485616, grp2sd =1.903206, grp1n = 53.15181, grp2n = 51.52012)
+# Non-White Refugee Male 50% and German Male 50%
+cd.s.6<-esc::esc_mean_sd(grp1m=3.635870 , grp2m=1.863551, grp1sd = 1.520875, grp2sd =1.822215, grp1n = 65.07594 , grp2n = 50.67903)
+# Non-White Refugee Male 100% and German Male 100%
+cd.s.7<-esc::esc_mean_sd(grp1m= 4.457362, grp2m=2.390846, grp1sd = 1.093133, grp2sd =	1.732821, grp1n = 58.36774, grp2n = 61.14349)
+
+
+```
+
+```{r}
+### weighted cohen's d (standarized mean difference)  for culture
+# Non-White Refugee Male 0% and 50%
+cd.c.1<- esc::esc_mean_sd(grp1m=2.946746, grp2m=2.977014, grp1sd = 1.930164, grp2sd =1.942671, grp1n = 53.15181, grp2n = 65.07594)
+# Non-White Refugee Male 50% and 100%
+cd.c.2<-esc::esc_mean_sd(grp1m=2.977014, grp2m=3.799373, grp1sd = 1.942671, grp2sd = 1.780804, grp1n = 65.07594, grp2n = 58.36774)
+# Non-White Refugee Male 0% and 100%
+cd.c.3<-esc::esc_mean_sd(grp1m=2.946746, grp2m=3.799373, grp1sd =1.930164, grp2sd =	1.780804,  grp1n = 53.15181 , grp2n = 58.36774)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.c.4<-esc::esc_mean_sd(grp1m=3.799373 , grp2m=3.117760, grp1sd =1.780804 , grp2sd =1.859081, grp1n = 58.36774 , grp2n = 36.06186)
+# Non-White Refugee Male 0% and German Male 0% (Not Applicable)
+cd.c.5<- esc::esc_mean_sd(grp1m=0 , grp2m=0 , grp1sd =0  , grp2sd =0 , grp1n = 53.15181, grp2n = 51.52012)
+# Non-White Refugee Male 50% and German Male 50% (Not Applicable)
+cd.c.6<-esc::esc_mean_sd(grp1m=0 , grp2m=0 , grp1sd =0 , grp2sd =	0, grp1n = 65.07594 , grp2n = 50.67903)
+# Non-White Refugee Male 100% and German Male 100% (Not Applicable)
+cd.c.7<-esc::esc_mean_sd(grp1m=0 , grp2m=0 , grp1sd =0 , grp2sd =0	, grp1n = 58.36774, grp2n = 61.14349)
+
+```
+
+
+
+```{r}
+
+Cohens_d <- c(cd.a.1$es, cd.a.2$es, cd.a.3$es, cd.a.4$es, cd.a.5$es, cd.a.6$es, cd.a.7$es,
+             cd.j.1$es, cd.j.2$es, cd.j.3$es, cd.j.4$es, cd.j.5$es, cd.j.6$es, cd.j.7$es,
+             cd.m.1$es, cd.m.2$es, cd.m.3$es, cd.m.4$es, cd.m.5$es, cd.m.6$es, cd.m.7$es,
+             cd.s.1$es, cd.s.2$es, cd.s.3$es, cd.s.4$es, cd.s.5$es, cd.s.6$es, cd.s.7$es,
+             cd.c.1$es, cd.c.2$es, cd.c.3$es, cd.c.4$es, cd.c.5$es, cd.c.6$es, cd.c.7$es)
+
+Lower.ci <- c(cd.a.1$ci.lo, cd.a.2$ci.lo, cd.a.3$ci.lo, cd.a.4$ci.lo, cd.a.5$ci.lo, cd.a.6$ci.lo, cd.a.7$ci.lo,
+             cd.j.1$ci.lo, cd.j.2$ci.lo, cd.j.3$ci.lo, cd.j.4$ci.lo, cd.j.5$ci.lo, cd.j.6$ci.lo, cd.j.7$ci.lo,
+             cd.m.1$ci.lo, cd.m.2$ci.lo, cd.m.3$ci.lo, cd.m.4$ci.lo, cd.m.5$ci.lo, cd.m.6$ci.lo, cd.m.7$ci.lo,
+             cd.s.1$ci.lo, cd.s.2$ci.lo, cd.s.3$ci.lo, cd.s.4$ci.lo, cd.s.5$ci.lo, cd.s.6$ci.lo, cd.s.7$ci.lo,
+             cd.c.1$ci.lo, cd.c.2$ci.lo, cd.c.3$ci.lo, cd.c.4$ci.lo, cd.c.5$ci.lo, cd.c.6$ci.lo, cd.c.7$ci.lo)
+
+Upper.ci <- c(cd.a.1$ci.hi, cd.a.2$ci.hi, cd.a.3$ci.hi, cd.a.4$ci.hi, cd.a.5$ci.hi, cd.a.6$ci.hi, cd.a.7$ci.hi,
+             cd.j.1$ci.hi, cd.j.2$ci.hi, cd.j.3$ci.hi, cd.j.4$ci.hi, cd.j.5$ci.hi, cd.j.6$ci.hi, cd.j.7$ci.hi,
+             cd.m.1$ci.hi, cd.m.2$ci.hi, cd.m.3$ci.hi, cd.m.4$ci.hi, cd.m.5$ci.hi, cd.m.6$ci.hi, cd.m.7$ci.hi,
+             cd.s.1$ci.hi, cd.s.2$ci.hi, cd.s.3$ci.hi, cd.s.4$ci.hi, cd.s.5$ci.hi, cd.s.6$ci.hi, cd.s.7$ci.hi,
+             cd.c.1$ci.hi, cd.c.2$ci.hi, cd.c.3$ci.hi, cd.c.4$ci.hi, cd.c.5$ci.hi, cd.c.6$ci.hi, cd.c.7$ci.hi)
+
+Threat_type <- rep(c("Non-Acceptance","Threats to Job Competition", "Threats to Mate Competition", "Threats to Safety", "Threats to Culture"), each=7)
+
+Groups <- rep(c("Non-white Refugee Male 0% & 50%",
+                "Non-white Refugee Male 50% & 100%", 
+                "Non-white Refugee Male 0% & 100%",
+                "Non-white Refugee Male 100% & white Refugee Male 100%", 
+                "Non-white Refugee Male 0% & Germen male 0%",
+                "Non-white Refugee Male 50% & Germen male 50%",
+                "Non-white Refugee Male 100% & Germen male 100%"),times=5)
+
+cohen_d_tb <- data.frame(Threat_type, Groups, Cohens_d, Lower.ci, Upper.ci)
+
+
+```
+
+```{r}
+
+ch.tab <- gt(data = cohen_d_tb) %>% 
+  tab_header(
+    title = "The Effect Size Across Non-white Refugee Groups",
+    subtitle = "With 0%, 50%, 100% Sex Ratio toward Males")%>%
+  tab_source_note("confidence Level: 0.95")
+
+# openxlsx::write.xlsx(cohen_d_tb, file = "output/cohens_d_tab_S13.xlsx")
+
+```
+
+```{r}
+
+rm(cd.a.1, cd.a.2, cd.a.3, cd.a.4, cd.a.5, cd.a.6, cd.a.7,
+  cd.j.1, cd.j.2, cd.j.3, cd.j.4, cd.j.5, cd.j.6, cd.j.7,
+  cd.m.1, cd.m.2, cd.m.3, cd.m.4, cd.m.5, cd.m.6, cd.m.7,
+  cd.s.1, cd.s.2, cd.s.3, cd.s.4, cd.s.5, cd.s.6, cd.s.7,
+  cd.c.1, cd.c.2, cd.c.3, cd.c.4, cd.c.5, cd.c.6, cd.c.7)
+
+```
+
+
+## B.2 Mean Scores and Cohen's D Scores for Figure 3 and Figure 4
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+non_accept_sex <- dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=weighted.mean(non_accept, psweight),
+            sd=sqrt(wtd.var(non_accept, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Non-Acceptance")
+
+Job_com_sex <- dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=weighted.mean(threat_job, psweight),
+            sd=sqrt(wtd.var(threat_job, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Job Competition")
+
+
+Mate_com_sex <- dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=weighted.mean(threat_mate, psweight),
+            sd=sqrt(wtd.var(threat_mate, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Mate Competition")
+
+
+Cul_thr_sex <- dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=weighted.mean(threat_culture, psweight),
+            sd=sqrt(wtd.var(threat_culture, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to German Culture")
+
+
+Safe_con_sex <- dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=weighted.mean(threat_safety, psweight),
+            sd=sqrt(wtd.var(threat_safety, psweight)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Safety")
+
+```
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+
+Thr_sex <- rbind(non_accept_sex, Job_com_sex, Mate_com_sex, Safe_con_sex, Cul_thr_sex)
+names(Thr_sex) <- tolower(names(Thr_sex))
+
+Thr_sex$scenario <- factor(Thr_sex$scenario , 
+                       levels = c("brown_male_0", 
+                                  "brown_male_50", 
+                                  "brown_male_100", 
+                                  "white_male_100", 
+                                  "German_male_0", 
+                                  "German_male_50", 
+                                  "German_male_100"), 
+                       labels= c("Non-White Refugee Male 0%",
+                                 "Non-White Refugee Male 50%",
+                                 "Non-White Refugee Male 100%",
+                                 "White Refugee Male 100%",
+                                 "German Male 0%",
+                                 "German Male 50%", 
+                                 "German Male 100%"))
+
+
+```
+
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+
+print(Thr_sex, n=30)
+mean.tab.sex <- gt(data = Thr_sex) %>% 
+  tab_header(
+    title = "Weighted Mean Scores by Conditions of Non-White Refugee Sex Ratio across Sex of respondants")%>%
+  tab_source_note("confidence Level: 0.95")
+
+# openxlsx::write.xlsx(mean.tab.sex, file = "output/mean_tab_sex_S14.xlsx")
+
+```
+
+#### weighted n in every coonditions by SEX
+```{r,echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+questionr::wtd.table(dt_for_sm$scenario, dt_for_sm$SEX, weights = dt_for_sm$psweight)
+#                    Male   Female  Diverse
+# brown_male_0    24.44524 28.70657  0.00000
+# brown_male_50   32.09374 32.98221  0.00000
+# brown_male_100  23.98811 34.37963  0.00000
+# white_male_100  18.75392 17.30795  0.00000
+# German_male_0   30.19413 21.32600  0.00000
+# German_male_50  28.90279 21.77624  0.00000
+# German_male_100 36.50273 24.64076  0.00000
+```
+
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+
+### weighted cohen's d (standarized mean difference)  for Non-Acceptance by SEX
+
+# Non-White Refugee Male 0% and 50%
+cd.a.1.m<- esc::esc_mean_sd(grp1m= 3.55, grp2m= 3.71, grp1sd = 1.57, grp2sd = 1.81, grp1n =24.44524 , grp2n = 32.09374)
+# Non-White Refugee Male 50% and 100%
+cd.a.2.m<-esc::esc_mean_sd(grp1m=3.71, grp2m=4.19, grp1sd =1.81 , grp2sd =1.38	, grp1n = 32.09374 , grp2n = 23.98811)
+# Non-White Refugee Male 0% and 100%
+cd.a.3.m<-esc::esc_mean_sd(grp1m=3.55, grp2m=4.19, grp1sd =1.57, grp2sd =1.38, grp1n =24.44524, grp2n =23.98811)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.a.4.m<-esc::esc_mean_sd(grp1m=4.19 , grp2m=3.75 , grp1sd =1.38, grp2sd =1.70, grp1n =23.98811, grp2n = 18.75392)
+# Non-White Refugee Male 0% and German Male 0% 
+cd.a.5.m<- esc::esc_mean_sd(grp1m=3.55, grp2m=1.54, grp1sd =1.57, grp2sd =2.04, grp1n =24.44524, grp2n =30.19413)
+# Non-White Refugee Male 50% and German Male 50%
+cd.a.6.m<-esc::esc_mean_sd(grp1m=3.71, grp2m=1.72, grp1sd =1.81, grp2sd = 2.05, grp1n =32.09374, grp2n =28.90279)
+# Non-White Refugee Male 100% and German Male 100%
+cd.a.7.m<-esc::esc_mean_sd(grp1m=4.19, grp2m=1.79, grp1sd =1.38, grp2sd =1.82, grp1n =23.98811, grp2n =36.50273)
+
+
+# Non-White Refugee Male 0% and 50%
+cd.a.1.f<- esc::esc_mean_sd(grp1m=3.36, grp2m=3.27 , grp1sd = 1.67 , grp2sd = 1.59, grp1n = 28.70657 , grp2n = 32.98221)
+# Non-White Refugee Male 50% and 100%
+cd.a.2.f<-esc::esc_mean_sd(grp1m=3.27 , grp2m= 4.22, grp1sd = 1.59, grp2sd = 1.18, grp1n = 32.98221 , grp2n = 34.37963)
+# Non-White Refugee Male 0% and 100%
+cd.a.3.f<-esc::esc_mean_sd(grp1m=3.36, grp2m=4.22, grp1sd =1.67, grp2sd =1.18, grp1n =28.70657, grp2n =34.37963)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.a.4.f<-esc::esc_mean_sd(grp1m=4.22 , grp2m=2.96 , grp1sd =1.18, grp2sd = 1.89, grp1n =34.37963, grp2n =17.30795)
+# Non-White Refugee Male 0% and German Male 0% 
+cd.a.5.f<- esc::esc_mean_sd(grp1m=3.36, grp2m=1.76, grp1sd =1.67, grp2sd =2.12, grp1n =28.70657, grp2n =21.32600)
+# Non-White Refugee Male 50% and German Male 50%
+cd.a.6.f<-esc::esc_mean_sd(grp1m=3.27, grp2m=0.948, grp1sd =1.59, grp2sd =1.46, grp1n =32.98221, grp2n =21.77624)
+# Non-White Refugee Male 100% and German Male 100%
+cd.a.7.f<-esc::esc_mean_sd(grp1m=4.22, grp2m=1.38, grp1sd =1.18, grp2sd =1.50, grp1n =34.37963, grp2n =24.64076)
+
+```
+
+```{r}
+### weighted cohen's d (standarized mean difference)  for Job competition by SEX
+# Non-White Refugee Male 0% and 50%
+cd.j.1.m<- esc::esc_mean_sd(grp1m=3.47, grp2m=4.13, grp1sd = 1.81, grp2sd =1.37, grp1n= 24.44524 , grp2n= 32.09374)
+# Non-White Refugee Male 50% and 100%
+cd.j.2.m<-esc::esc_mean_sd(grp1m=4.13, grp2m=4.50, grp1sd = 1.37, grp2sd =1.18, grp1n= 32.09374 , grp2n= 23.98811)
+# Non-White Refugee Male 0% and 100%
+cd.j.3.m<-esc::esc_mean_sd(grp1m=3.47, grp2m=4.50, grp1sd = 1.81, grp2sd = 1.18, grp1n =24.44524, grp2n =23.98811)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.j.4.m<-esc::esc_mean_sd(grp1m=4.50, grp2m=3.22, grp1sd = 1.18, grp2sd =2.26, grp1n =23.98811, grp2n = 18.75392)
+# Non-White Refugee Male 0% and German Male 0% 
+cd.j.5.m<- esc::esc_mean_sd(grp1m=3.47, grp2m=2.75, grp1sd =1.81, grp2sd =2.00, grp1n =24.44524, grp2n =30.19413)
+# Non-White Refugee Male 50% and German Male 50%
+cd.j.6.m<-esc::esc_mean_sd(grp1m=4.13, grp2m= 3.58, grp1sd =1.37, grp2sd =1.77, grp1n =32.09374, grp2n =28.90279)
+# Non-White Refugee Male 100% and German Male 100%
+cd.j.7.m<-esc::esc_mean_sd(grp1m=4.50, grp2m=3.34, grp1sd =1.18, grp2sd =1.79, grp1n =23.98811, grp2n =36.50273)
+
+
+
+# Non-White Refugee Male 0% and 50%
+cd.j.1.f<- esc::esc_mean_sd(grp1m=3.79, grp2m=3.22, grp1sd =1.72 , grp2sd =1.87, grp1n= 28.70657 , grp2n= 32.98221 )
+# Non-White Refugee Male 50% and 100%
+cd.j.2.f<-esc::esc_mean_sd(grp1m=3.22, grp2m=3.31, grp1sd = 1.87, grp2sd = 2.15, grp1n= 32.98221, grp2n= 34.37963 )
+# Non-White Refugee Male 0% and 100%
+cd.j.3.f<-esc::esc_mean_sd(grp1m=3.79, grp2m=3.31, grp1sd = 1.72, grp2sd = 2.15, grp1n =28.70657, grp2n =34.37963)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.j.4.f<-esc::esc_mean_sd(grp1m=3.31, grp2m=3.72, grp1sd =2.15, grp2sd =1.49, grp1n =34.37963, grp2n =17.30795)
+# Non-White Refugee Male 0% and German Male 0% 
+cd.j.5.f<- esc::esc_mean_sd(grp1m=3.79, grp2m=3.04, grp1sd =1.72, grp2sd =1.91, grp1n =28.70657, grp2n =21.32600)
+# Non-White Refugee Male 50% and German Male 50%
+cd.j.6.f<-esc::esc_mean_sd(grp1m=3.22, grp2m=3.75, grp1sd =1.87, grp2sd =1.76 , grp1n =32.98221, grp2n =21.77624)
+# Non-White Refugee Male 100% and German Male 100%
+cd.j.7.f<-esc::esc_mean_sd(grp1m=3.31, grp2m=2.94, grp1sd =2.15, grp2sd = 1.65, grp1n =34.37963, grp2n =24.64076)
+
+
+```
+
+
+
+```{r}
+### weighted cohen's d (standarized mean difference)  for mate competition by SEX
+# Non-White Refugee Male 0% and 50%
+cd.m.1.m<- esc::esc_mean_sd(grp1m=2.33, grp2m=2.74, grp1sd =1.76 , grp2sd =1.82, grp1n = 24.44524, grp2n = 32.09374)
+# Non-White Refugee Male 50% and 100%
+cd.m.2.m<-esc::esc_mean_sd(grp1m=2.74, grp2m= 1.82, grp1sd =1.82 , grp2sd =	1.74, grp1n = 32.09374, grp2n = 23.98811)
+# Non-White Refugee Male 0% and 100%
+cd.m.3.m<-esc::esc_mean_sd(grp1m=2.33, grp2m=1.82, grp1sd = 1.76, grp2sd =1.74, grp1n =24.44524, grp2n =23.98811)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.m.4.m<-esc::esc_mean_sd(grp1m=1.82 , grp2m= 2.93, grp1sd = 1.74, grp2sd = 1.78, grp1n =23.98811, grp2n = 18.75392)
+# Non-White Refugee Male 0% and German Male 0% 
+cd.m.5.m<- esc::esc_mean_sd(grp1m=2.33, grp2m=2.16, grp1sd =1.76, grp2sd =1.65, grp1n =24.44524, grp2n =30.19413)
+# Non-White Refugee Male 50% and German Male 50%
+cd.m.6.m<-esc::esc_mean_sd(grp1m=2.74, grp2m=2.13, grp1sd =1.82, grp2sd =1.64, grp1n =32.09374, grp2n =28.90279)
+# Non-White Refugee Male 100% and German Male 100%
+cd.m.7.m<-esc::esc_mean_sd(grp1m=1.82, grp2m=2.46, grp1sd =1.74, grp2sd =1.65, grp1n =23.98811, grp2n =36.50273)
+
+
+# Non-White Refugee Male 0% and 50%
+cd.m.1.f<- esc::esc_mean_sd(grp1m=3.36, grp2m=2.70, grp1sd = 1.46 , grp2sd =1.49, grp1n = 28.70657, grp2n = 32.98221)
+# Non-White Refugee Male 50% and 100%
+cd.m.2.f<-esc::esc_mean_sd(grp1m=2.70, grp2m=4.12, grp1sd = 1.49, grp2sd =1.40, grp1n = 32.98221, grp2n = 34.37963)
+# Non-White Refugee Male 0% and 100%
+cd.m.3.f<-esc::esc_mean_sd(grp1m=3.36, grp2m=4.12, grp1sd =1.46, grp2sd =1.40, grp1n =28.70657, grp2n =34.37963)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.m.4.f<-esc::esc_mean_sd(grp1m=4.12 , grp2m= 2.98 , grp1sd =1.40, grp2sd =1.75, grp1n =34.37963, grp2n =17.30795)
+# Non-White Refugee Male 0% and German Male 0% 
+cd.m.5.f<- esc::esc_mean_sd(grp1m=3.36, grp2m= 2.14, grp1sd =1.46, grp2sd =1.40, grp1n =28.70657, grp2n =21.32600)
+# Non-White Refugee Male 50% and German Male 50%
+cd.m.6.f<-esc::esc_mean_sd(grp1m=2.70, grp2m=1.74, grp1sd =1.49, grp2sd =1.20, grp1n =32.98221, grp2n =21.77624)
+# Non-White Refugee Male 100% and German Male 100%
+cd.m.7.f<-esc::esc_mean_sd(grp1m=4.12, grp2m=1.84, grp1sd =1.40, grp2sd =1.25, grp1n =34.37963, grp2n =24.64076)
+
+```
+
+
+
+```{r}
+### weighted cohen's d (standarized mean difference)  for safty by SEX
+# Non-White Refugee Male 0% and 50%
+cd.s.1.m<- esc::esc_mean_sd(grp1m=3.49, grp2m=4.22, grp1sd = 1.78, grp2sd =1.09, grp1n = 24.44524, grp2n = 32.09374)
+# Non-White Refugee Male 50% and 100%
+cd.s.2.m<-esc::esc_mean_sd(grp1m=4.22, grp2m=4.50, grp1sd = 1.09, grp2sd =	1.05, grp1n = 32.09374, grp2n = 23.98811)
+# Non-White Refugee Male 0% and 100%
+cd.s.3.m<-esc::esc_mean_sd(grp1m=3.49, grp2m=4.50, grp1sd =1.78, grp2sd = 1.05, grp1n =24.44524, grp2n =23.98811)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.s.4.m<-esc::esc_mean_sd(grp1m=4.50 , grp2m=3.71, grp1sd =1.05, grp2sd =1.70, grp1n =23.98811, grp2n = 18.75392)
+# Non-White Refugee Male 0% and German Male 0% 
+cd.s.5.m<- esc::esc_mean_sd(grp1m=3.49, grp2m=1.92, grp1sd = 1.78, grp2sd =1.96, grp1n =24.44524, grp2n =30.19413)
+# Non-White Refugee Male 50% and German Male 50%
+cd.s.6.m<-esc::esc_mean_sd(grp1m=4.22, grp2m=2.16, grp1sd = 1.09, grp2sd =1.96, grp1n =32.09374, grp2n =28.90279)
+# Non-White Refugee Male 100% and German Male 100%
+cd.s.7.m<-esc::esc_mean_sd(grp1m=4.50, grp2m=2.72, grp1sd = 1.05, grp2sd =1.85, grp1n =23.98811, grp2n =36.50273)
+
+
+# Non-White Refugee Male 0% and 50%
+cd.s.1.f<- esc::esc_mean_sd(grp1m=4.09, grp2m=3.07, grp1sd = 1.14, grp2sd =1.68, grp1n =28.70657 , grp2n = 32.98221)
+# Non-White Refugee Male 50% and 100%
+cd.s.2.f<-esc::esc_mean_sd(grp1m= 3.07, grp2m=4.43, grp1sd = 1.68, grp2sd =1.14	, grp1n = 32.98221, grp2n = 34.37963)
+# Non-White Refugee Male 0% and 100%
+cd.s.3.f<-esc::esc_mean_sd(grp1m=4.09, grp2m=4.43, grp1sd =1.14, grp2sd =1.14, grp1n =28.70657, grp2n =34.37963)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.s.4.f<-esc::esc_mean_sd(grp1m=4.43 , grp2m= 3.74, grp1sd =1.14, grp2sd =1.49, grp1n =34.37963, grp2n =17.30795)
+# Non-White Refugee Male 0% and German Male 0% 
+cd.s.5.f<- esc::esc_mean_sd(grp1m=4.09, grp2m=1.89, grp1sd =1.14, grp2sd = 1.86, grp1n =28.70657, grp2n =21.32600)
+# Non-White Refugee Male 50% and German Male 50%
+cd.s.6.f<-esc::esc_mean_sd(grp1m=3.07, grp2m=1.47, grp1sd =1.68, grp2sd =1.59, grp1n =32.98221, grp2n =21.77624)
+# Non-White Refugee Male 100% and German Male 100%
+cd.s.7.f<-esc::esc_mean_sd(grp1m=4.43, grp2m=1.91, grp1sd =1.14, grp2sd =1.44, grp1n =34.37963, grp2n =24.64076)
+
+
+```
+
+
+
+```{r}
+### weighted cohen's d (standarized mean difference)  for culture by SEX
+# Non-White Refugee Male 0% and 50%
+cd.c.1.m<- esc::esc_mean_sd(grp1m=2.76, grp2m=3.48, grp1sd =2.03 , grp2sd =1.78, grp1n =24.44524 , grp2n = 32.09374)
+# Non-White Refugee Male 50% and 100%
+cd.c.2.m<-esc::esc_mean_sd(grp1m=3.48, grp2m=3.57, grp1sd =1.78 , grp2sd =1.87	, grp1n = 32.09374, grp2n = 23.98811)
+# Non-White Refugee Male 0% and 100%
+cd.c.3.m<-esc::esc_mean_sd(grp1m=2.76, grp2m=3.57, grp1sd = 2.03, grp2sd =1.87, grp1n =24.44524, grp2n =23.98811)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.c.4.m<-esc::esc_mean_sd(grp1m=3.57 , grp2m=2.87 , grp1sd =1.87, grp2sd =1.87, grp1n =23.98811, grp2n = 18.75392)
+# Non-White Refugee Male 0% and German Male 0% 
+cd.c.5.m<- esc::esc_mean_sd(grp1m=0, grp2m=0, grp1sd =0, grp2sd =0, grp1n =24.44524, grp2n =30.19413)
+# Non-White Refugee Male 50% and German Male 50%
+cd.c.6.m<-esc::esc_mean_sd(grp1m=0, grp2m=0, grp1sd =0, grp2sd =0, grp1n =32.09374, grp2n =28.90279)
+# Non-White Refugee Male 100% and German Male 100%
+cd.c.7.m<-esc::esc_mean_sd(grp1m=0, grp2m=0, grp1sd =0, grp2sd =0, grp1n =23.98811, grp2n =36.50273)
+
+# Non-White Refugee Male 0% and 50%
+cd.c.1.f<- esc::esc_mean_sd(grp1m=3.11, grp2m=2.49, grp1sd = 1.87, grp2sd =2.00, grp1n = 28.70657, grp2n = 32.98221)
+# Non-White Refugee Male 50% and 100%
+cd.c.2.f<-esc::esc_mean_sd(grp1m=2.49, grp2m=3.96, grp1sd =2.00 , grp2sd =1.72	, grp1n =32.98221 , grp2n =34.37963 )
+# Non-White Refugee Male 0% and 100%
+cd.c.3.f<-esc::esc_mean_sd(grp1m=3.11, grp2m=3.96, grp1sd = 1.87, grp2sd = 1.72, grp1n =28.70657, grp2n =34.37963)
+# Non-White Refugee Male 100%  and White Refugee Male 100%
+cd.c.4.f<-esc::esc_mean_sd(grp1m=3.96 , grp2m= 2.87, grp1sd = 1.72, grp2sd = 1.87, grp1n =34.37963, grp2n =17.30795)
+# Non-White Refugee Male 0% and German Male 0% 
+cd.c.5.f<- esc::esc_mean_sd(grp1m= 0, grp2m=0, grp1sd =0, grp2sd =0, grp1n =28.70657, grp2n =21.32600)
+# Non-White Refugee Male 50% and German Male 50%
+cd.c.6.f<-esc::esc_mean_sd(grp1m=0, grp2m=0, grp1sd =0, grp2sd =0, grp1n =32.98221, grp2n =21.77624)
+# Non-White Refugee Male 100% and German Male 100%
+cd.c.7.f<-esc::esc_mean_sd(grp1m=0, grp2m=0, grp1sd =0, grp2sd =0, grp1n =34.37963, grp2n =24.64076)
+
+
+```
+
+
+
+```{r}
+Cohens_d_sex <- c(cd.a.1.m$es, cd.a.2.m$es, cd.a.3.m$es, cd.a.4.m$es, cd.a.5.m$es, cd.a.6.m$es, cd.a.7.m$es,
+                cd.a.1.f$es, cd.a.2.f$es, cd.a.3.f$es, cd.a.4.f$es, cd.a.5.f$es, cd.a.6.f$es, cd.a.7.f$es,
+                cd.j.1.m$es, cd.j.2.m$es, cd.j.3.m$es, cd.j.4.m$es, cd.j.5.m$es, cd.j.6.m$es, cd.j.7.m$es,
+                cd.j.1.f$es, cd.j.2.f$es, cd.j.3.f$es, cd.j.4.f$es, cd.j.5.f$es, cd.j.6.f$es, cd.j.7.f$es,
+                cd.m.1.m$es, cd.m.2.m$es, cd.m.3.m$es, cd.m.4.m$es, cd.m.5.m$es, cd.m.6.m$es, cd.m.7.m$es,
+                cd.m.1.f$es, cd.m.2.f$es, cd.m.3.f$es, cd.m.4.f$es, cd.m.5.f$es, cd.m.6.f$es, cd.m.7.f$es,
+                cd.s.1.m$es, cd.s.2.m$es, cd.s.3.m$es, cd.s.4.m$es, cd.s.5.m$es, cd.s.6.m$es, cd.s.7.m$es,
+                cd.s.1.f$es, cd.s.2.f$es, cd.s.3.f$es, cd.s.4.f$es, cd.s.5.f$es, cd.s.6.f$es, cd.s.7.f$es,
+                cd.c.1.m$es, cd.c.2.m$es, cd.c.3.m$es, cd.c.4.m$es, cd.c.5.m$es, cd.c.6.m$es, cd.c.7.m$es,
+                cd.c.1.f$es, cd.c.2.f$es, cd.c.3.f$es, cd.c.4.f$es, cd.c.5.f$es, cd.c.6.f$es, cd.c.7.f$es)
+
+Lower_ci_sex <- c(cd.a.1.m$ci.lo, cd.a.2.m$ci.lo, cd.a.3.m$ci.lo, cd.a.4.m$ci.lo, cd.a.5.m$ci.lo, cd.a.6.m$ci.lo, cd.a.7.m$ci.lo,
+                cd.a.1.f$ci.lo, cd.a.2.f$ci.lo, cd.a.3.f$ci.lo, cd.a.4.f$ci.lo, cd.a.5.f$ci.lo, cd.a.6.f$ci.lo, cd.a.7.f$ci.lo,
+                cd.j.1.m$ci.lo, cd.j.2.m$ci.lo, cd.j.3.m$ci.lo, cd.j.4.m$ci.lo, cd.j.5.m$ci.lo, cd.j.6.m$ci.lo, cd.j.7.m$ci.lo,
+                cd.j.1.f$ci.lo, cd.j.2.f$ci.lo, cd.j.3.f$ci.lo, cd.j.4.f$ci.lo, cd.j.5.f$ci.lo, cd.j.6.f$ci.lo, cd.j.7.f$ci.lo,
+                cd.m.1.m$ci.lo, cd.m.2.m$ci.lo, cd.m.3.m$ci.lo, cd.m.4.m$ci.lo, cd.m.5.m$ci.lo, cd.m.6.m$ci.lo, cd.m.7.m$ci.lo,
+                cd.m.1.f$ci.lo, cd.m.2.f$ci.lo, cd.m.3.f$ci.lo, cd.m.4.f$ci.lo, cd.m.5.f$ci.lo, cd.m.6.f$ci.lo, cd.m.7.f$ci.lo,
+                cd.s.1.m$ci.lo, cd.s.2.m$ci.lo, cd.s.3.m$ci.lo, cd.s.4.m$ci.lo, cd.s.5.m$ci.lo, cd.s.6.m$ci.lo, cd.s.7.m$ci.lo,
+                cd.s.1.f$ci.lo, cd.s.2.f$ci.lo, cd.s.3.f$ci.lo, cd.s.4.f$ci.lo, cd.s.5.f$ci.lo, cd.s.6.f$ci.lo, cd.s.7.f$ci.lo,
+                cd.c.1.m$ci.lo, cd.c.2.m$ci.lo, cd.c.3.m$ci.lo, cd.c.4.m$ci.lo, cd.c.5.m$ci.lo, cd.c.6.m$ci.lo, cd.c.7.m$ci.lo,
+                cd.c.1.f$ci.lo, cd.c.2.f$ci.lo, cd.c.3.f$ci.lo, cd.c.4.f$ci.lo, cd.c.5.f$ci.lo, cd.c.6.f$ci.lo, cd.c.7.f$ci.lo)
+
+Upper_ci_sex <- c(cd.a.1.m$ci.hi, cd.a.2.m$ci.hi, cd.a.3.m$ci.hi, cd.a.4.m$ci.hi, cd.a.5.m$ci.hi, cd.a.6.m$ci.hi, cd.a.7.m$ci.hi,
+                cd.a.1.f$ci.hi, cd.a.2.f$ci.hi, cd.a.3.f$ci.hi, cd.a.4.f$ci.hi, cd.a.5.f$ci.hi, cd.a.6.f$ci.hi, cd.a.7.f$ci.hi,
+                cd.j.1.m$ci.hi, cd.j.2.m$ci.hi, cd.j.3.m$ci.hi, cd.j.4.m$ci.hi, cd.j.5.m$ci.hi, cd.j.6.m$ci.hi, cd.j.7.m$ci.hi,
+                cd.j.1.f$ci.hi, cd.j.2.f$ci.hi, cd.j.3.f$ci.hi, cd.j.4.f$ci.hi, cd.j.5.f$ci.hi, cd.j.6.f$ci.hi, cd.j.7.f$ci.hi,
+                cd.m.1.m$ci.hi, cd.m.2.m$ci.hi, cd.m.3.m$ci.hi, cd.m.4.m$ci.hi, cd.m.5.m$ci.hi, cd.m.6.m$ci.hi, cd.m.7.m$ci.hi,
+                cd.m.1.f$ci.hi, cd.m.2.f$ci.hi, cd.m.3.f$ci.hi, cd.m.4.f$ci.hi, cd.m.5.f$ci.hi, cd.m.6.f$ci.hi, cd.m.7.f$ci.hi,
+                cd.s.1.m$ci.hi, cd.s.2.m$ci.hi, cd.s.3.m$ci.hi, cd.s.4.m$ci.hi, cd.s.5.m$ci.hi, cd.s.6.m$ci.hi, cd.s.7.m$ci.hi,
+                cd.s.1.f$ci.hi, cd.s.2.f$ci.hi, cd.s.3.f$ci.hi, cd.s.4.f$ci.hi, cd.s.5.f$ci.hi, cd.s.6.f$ci.hi, cd.s.7.f$ci.hi,
+                cd.c.1.m$ci.hi, cd.c.2.m$ci.hi, cd.c.3.m$ci.hi, cd.c.4.m$ci.hi, cd.c.5.m$ci.hi, cd.c.6.m$ci.hi, cd.c.7.m$ci.hi,
+                cd.c.1.f$ci.hi, cd.c.2.f$ci.hi, cd.c.3.f$ci.hi, cd.c.4.f$ci.hi, cd.c.5.f$ci.hi, cd.c.6.f$ci.hi, cd.c.7.f$ci.hi)
+
+Sex <- rep(c("Male","Female"),each=7, times=5 )
+
+Threat_type_sex <- rep(c("Non-Acceptance","Threats to Job Competition", "Threats to Mate Competition", "Threats to Safety", "Threats to Culture"),each=14)
+
+Groups_sex <- rep(c("Non-white Refugee Male 0% & 50%","Non-white Refugee Male 50% & 100%",
+                    "Non-white Refugee Male 00% & 100%", "Non-white Refugee Male 100% & White Refugee Male 100%",
+                    "Non-white Refugee Male 0% & German male 0%", "Non-white Refugee Male 50% & German male 50%",
+                    "Non-white Refugee Male 100% & German male 100%"),times=10)
+
+cohen_d_tb_sex <- data.frame(Threat_type_sex, Groups_sex, Sex, Cohens_d_sex, Lower_ci_sex, Upper_ci_sex)
+
+ch.tab.sex <- gt(data = cohen_d_tb_sex) %>% 
+  tab_header(
+    title = "The Effect Size Across Non-white Refugee Groups and Sex of Respondants",
+    subtitle = "With 0%, 50%, 100% Sex Ratio toward Males")%>%
+  tab_source_note("confidence Level: 0.95")
+
+ch.tab.sex
+
+# openxlsx::write.xlsx(ch.tab.sex, file = "output/cohens_d_sex_S15.xlsx")
+
+```
+
+```{r}
+
+rm(cd.a.1.m, cd.a.2.m, cd.a.3.m, cd.a.4.m, cd.a.5.m, cd.a.6.m, cd.a.7.m,
+                cd.a.1.f, cd.a.2.f, cd.a.3.f, cd.a.4.f, cd.a.5.f, cd.a.6.f, cd.a.7.f,
+                cd.j.1.m, cd.j.2.m, cd.j.3.m, cd.j.4.m, cd.j.5.m, cd.j.6.m, cd.j.7.m,
+                cd.j.1.f, cd.j.2.f, cd.j.3.f, cd.j.4.f, cd.j.5.f, cd.j.6.f, cd.j.7.f,
+                cd.m.1.m, cd.m.2.m, cd.m.3.m, cd.m.4.m, cd.m.5.m, cd.m.6.m, cd.m.7.m,
+                cd.m.1.f, cd.m.2.f, cd.m.3.f, cd.m.4.f, cd.m.5.f, cd.m.6.f, cd.m.7.f,
+                cd.s.1.m, cd.s.2.m, cd.s.3.m, cd.s.4.m, cd.s.5.m, cd.s.6.m, cd.s.7.m,
+                cd.s.1.f, cd.s.2.f, cd.s.3.f, cd.s.4.f, cd.s.5.f, cd.s.6.f, cd.s.7.f,
+                cd.c.1.m, cd.c.2.m, cd.c.3.m, cd.c.4.m, cd.c.5.m, cd.c.6.m, cd.c.7.m,
+                cd.c.1.f, cd.c.2.f, cd.c.3.f, cd.c.4.f, cd.c.5.f, cd.c.6.f, cd.c.7.f)
+
+```
+
+
+
+## B.3 Robustness test (Unweighted Mean Scores for Figure 1, 2, 3 and 4)
+
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+
+#use dt_for_sm
+Non_accept_uw <- dt_for_sm %>% 
+  group_by(scenario)%>%
+  summarise(mean=mean(non_accept),
+            sd=sqrt(var(non_accept)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(threat_type="Non-Acceptance")
+
+Job_com_uw <- dt_for_sm %>% 
+  group_by(scenario)%>%
+  summarise(mean=mean(threat_job),
+            sd=sqrt(var(threat_job)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(threat_type="Threats to Job Competition")
+
+
+Mate_com_uw <- dt_for_sm %>% 
+  group_by(scenario)%>%
+  summarise(mean=mean(threat_mate),
+            sd=sqrt(var(threat_mate)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(threat_type="Threats to Mate Competition")
+
+
+Cul_thr_uw <- dt_for_sm %>% 
+  group_by(scenario)%>%
+  summarise(mean=mean(threat_culture),
+            sd=sqrt(var(threat_culture)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(threat_type="Threats to German Culture")
+
+
+Safe_thr_uw <- dt_for_sm %>% 
+  group_by(scenario)%>%
+  summarise(mean=mean(threat_safety),
+            sd=sqrt(var(threat_safety)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(threat_type="Threats to Safety")
+
+```
+
+
+
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+
+Thr_uw <- rbind(Non_accept_uw,Job_com_uw, Mate_com_uw, Safe_thr_uw, Cul_thr_uw)
+
+Thr_uw$scenario <- factor(Thr_uw$scenario, 
+                       levels = c("brown_male_0", 
+                                  "brown_male_50", 
+                                  "brown_male_100", 
+                                  "white_male_100", 
+                                  "German_male_0", 
+                                  "German_male_50", 
+                                  "German_male_100"), 
+                       labels= c("Non-White Refugee Male 0%",
+                                 "Non-White Refugee Male 50%",
+                                 "Non-White Refugee Male 100%",
+                                 "White Refugee Male 100%",
+                                 "German Male 0%",
+                                 "German Male 50%", 
+                                 "German Male 100%"), ordered = T)
+
+
+Thr_uw <- Thr_uw[order(Thr_uw$threat_type ,Thr_uw$scenario),]
+
+print(Thr_uw, n=30)
+
+mean.tab_uw <- gt(data = Thr_uw) %>% 
+  tab_header(
+    title = "Unweighted Mean Scores by Conditions")%>%
+  tab_source_note("confidence Level: 0.95")
+
+```
+
+
+
+### FIGURE S4
+#### Non-acceptance
+##### Unweighted pairwise p value
+```{r}
+
+non_accept_t_test <-dt_for_sm %>% pairwise_t_test(non_accept~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+non_accept_t_test <- non_accept_t_test %>% add_xy_position(x="scenario")
+non_accept_t_test <- non_accept_t_test %>% filter(xmin==1&xmax==2|xmin==2&xmax==3|xmin==1&xmax==3|xmin==3&xmax==4|xmin==1&xmax==5|xmin==2&xmax==6|xmin==3&xmax==7)
+
+
+```
+
+
+
+```{r}
+
+plot_non_accept <-Non_accept_uw %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=scenario), stat = "identity" ,width=0.5,alpha=0.7)+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci), width=0.2, colour="orange", alpha=0.9)+
+  geom_text(aes(x=scenario, y=mean, label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.8),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="none")+
+  ylab("Level of Non-Acceptance")+
+  xlab(NULL)+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.5))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%",
+                              "German_male_0" = "German\nMale 0%", "German_male_50" = "German\nMale 50%",
+                              "German_male_100" = "German\nMale 100%"))+
+  scale_fill_manual(values = c("brown_male_0" = "#324C20", "brown_male_50" = "#324C20",
+                              "brown_male_100" = "#324C20", "white_male_100" = "#324C20",
+                              "German_male_0" = "#8CC364", "German_male_50" = "#8CC364",
+                              "German_male_100" = "#8CC364"))
+
+```
+
+```{r}
+
+plot_non_accept <-plot_non_accept + stat_pvalue_manual(non_accept_t_test, label = "significance", y.position = c(5, 5.3, 5.7, 5, 6, 5, 6.3) , bracket.shorten = 0.05)
+
+plot_non_accept
+
+```
+
+```{r}
+
+ # ggsave(filename = "U:/sex_ratio/output/Figure_S4.tiff", plot_non_accept, width = 16, height = 10, dpi=300, units = "cm")
+
+```
+
+
+
+### FIGURE S5
+#### Percieved threats
+#### Job competition
+### Unweighted pairwise p value
+```{r}
+
+threat_job_t_test <-dt_for_sm %>% pairwise_t_test(threat_job~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+threat_job_t_test <- threat_job_t_test %>% add_xy_position(x="scenario")
+threat_job_t_test <- threat_job_t_test %>% filter(xmin==1&xmax==2|xmin==2&xmax==3|xmin==1&xmax==3|xmin==3&xmax==4|xmin==1&xmax==5|xmin==2&xmax==6|xmin==3&xmax==7)
+
+
+```
+
+
+```{r}
+
+plot_threat_job <-Job_com_uw %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=scenario), stat = "identity", width=0.5,alpha=0.7)+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci), width=0.2, colour="orange", alpha=0.9)+
+  geom_text(aes(x=scenario, y=mean, label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.8),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position = "none")+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Job Competition")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.5))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%",
+                              "German_male_0" = "German\nMale 0%", "German_male_50" = "German\nMale 50%",
+                              "German_male_100" = "German\nMale 100%"))+
+    scale_fill_manual(values = c("brown_male_0" = "#324C20", "brown_male_50" = "#324C20",
+                              "brown_male_100" = "#324C20", "white_male_100" = "#324C20",
+                              "German_male_0" = "#8CC364", "German_male_50" = "#8CC364",
+                              "German_male_100" = "#8CC364"))
+
+```
+
+```{r}
+
+plot_threat_job <-plot_threat_job + stat_pvalue_manual(threat_job_t_test, label = "significance", y.position = c(5, 5.3, 5.7, 5, 5.9, 5, 6.2) , bracket.shorten = 0.05)
+
+plot_threat_job
+
+```
+
+#### Mate competition
+### Unweighted pairwise p value
+```{r}
+
+threat_mate_t_test <-dt_for_sm %>% pairwise_t_test(threat_mate~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+threat_mate_t_test <- threat_mate_t_test %>% add_xy_position(x="scenario")
+threat_mate_t_test <- threat_mate_t_test %>% filter(xmin==1&xmax==2|xmin==2&xmax==3|xmin==1&xmax==3|xmin==3&xmax==4|xmin==1&xmax==5|xmin==2&xmax==6|xmin==3&xmax==7)
+
+
+```
+
+
+```{r}
+
+plot_threat_mate <-Mate_com_uw %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=scenario), stat = "identity", width=0.5,alpha=0.7)+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci), width=0.2, colour="orange", alpha=0.9)+
+  geom_text(aes(x=scenario, y=mean, label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.8),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position = "none")+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Mate Competition")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.5))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%",
+                              "German_male_0" = "German\nMale 0%", "German_male_50" = "German\nMale 50%",
+                              "German_male_100" = "German\nMale 100%"))+
+   scale_fill_manual(values = c("brown_male_0" = "#324C20", "brown_male_50" = "#324C20",
+                              "brown_male_100" = "#324C20", "white_male_100" = "#324C20",
+                              "German_male_0" = "#8CC364", "German_male_50" = "#8CC364",
+                              "German_male_100" = "#8CC364"))
+
+```
+
+```{r}
+
+plot_threat_mate <-plot_threat_mate + stat_pvalue_manual(threat_mate_t_test, label = "significance", y.position = c(5, 5.3, 5.7, 5, 6, 5, 6.3) , bracket.shorten = 0.05)
+
+plot_threat_mate
+
+```
+
+#### Safety threats
+### Unweighted pairwise p value
+```{r}
+
+threat_safety_t_test <-dt_for_sm %>% pairwise_t_test(threat_safety~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+threat_safety_t_test <- threat_safety_t_test %>% add_xy_position(x="scenario")
+threat_safety_t_test <- threat_safety_t_test %>% filter(xmin==1&xmax==2|xmin==2&xmax==3|xmin==1&xmax==3|xmin==3&xmax==4|xmin==1&xmax==5|xmin==2&xmax==6|xmin==3&xmax==7)
+
+
+```
+
+
+```{r}
+
+plot_threat_safety <-Safe_thr_uw %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=scenario), stat = "identity", width=0.5,alpha=0.7)+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci), width=0.2, colour="orange", alpha=0.9)+
+  geom_text(aes(x=scenario, y=mean, label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.8),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position = "none")+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Safety")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.5))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%",
+                              "German_male_0" = "German\nMale 0%", "German_male_50" = "German\nMale 50%",
+                              "German_male_100" = "German\nMale 100%"))+
+     scale_fill_manual(values = c("brown_male_0" = "#324C20", "brown_male_50" = "#324C20",
+                              "brown_male_100" = "#324C20", "white_male_100" = "#324C20",
+                              "German_male_0" = "#8CC364", "German_male_50" = "#8CC364",
+                              "German_male_100" = "#8CC364"))
+
+
+```
+
+```{r}
+
+plot_threat_safety <-plot_threat_safety + stat_pvalue_manual(threat_safety_t_test, label = "significance", y.position = c(5.05, 5.4, 5.7, 5.05, 6, 5.05, 6.3) , bracket.shorten = 0.05)
+
+plot_threat_safety
+
+```
+
+#### Culrural threats
+### Unweighted pairwise p value
+```{r}
+
+dt_cul<- dt_for_sm %>% filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+dt_cul$scenario <- factor(dt_cul$equation,
+levels = c(1,2,3,4),
+labels = c("brown_male_0", "brown_male_50", "brown_male_100", "white_male_100"))
+
+threat_culture_t_test <- dt_cul %>% pairwise_t_test(threat_culture ~ scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+threat_culture_t_test <- threat_culture_t_test %>% add_xy_position(x="scenario")
+threat_culture_t_test <- threat_culture_t_test %>% filter(xmin==1&xmax==2|xmin==2&xmax==3|xmin==1&xmax==3|xmin==3&xmax==4)
+
+
+```
+
+
+
+```{r}
+
+plot_threat_culture <-Cul_thr %>% 
+  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100") %>%
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean), stat = "identity", fill="#324C20", width=0.5,alpha=0.7)+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci), width=0.2, colour="orange", alpha=0.9)+
+  geom_text(aes(x=scenario, y=mean, label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.8),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(plot.margin = margin(5.5, 140, 5.5, 5.5))+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Culture")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.5))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))
+
+```
+
+```{r}
+
+plot_threat_culture <-plot_threat_culture + stat_pvalue_manual(threat_culture_t_test, label = "significance", 
+                                                               y.position = c(5, 5.4, 5, 5) , bracket.shorten = 0.05)
+
+plot_threat_culture
+
+```
+
+
+#### conbine 4 figures
+
+```{r, fig.height=7, fig.width=12}
+tiff("output/Figure_S5.tiff", units = "cm", width = 25 , height = 17, res= 400)
+ggarrange(plot_threat_job, plot_threat_mate, plot_threat_safety, plot_threat_culture, 
+          labels = c("A","B","C", "D"),
+          ncol = 2,nrow = 2) 
+
+dev.off()
+```
+
+### Unweighted Mean Scores decompased by SEX for Figure 3 and 4
+
+
+```{r, echo=FALSE, message=FALSE, results='hide', cache=TRUE}
+
+#use dt_for_sm 
+
+non_accept_sex_uw <-dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=mean(non_accept),
+            sd=sqrt(var(non_accept)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Non-Acceptance")
+
+Job_com_sex_uw <- dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=mean(threat_job),
+            sd=sqrt(var(threat_job)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Job Competition")
+
+
+Mate_com_sex_uw <- dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=mean(threat_mate),
+            sd=sqrt(var(threat_mate)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Mate Competition")
+
+
+Cul_thr_sex_uw <- dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=mean(threat_culture),
+            sd=sqrt(var(threat_culture)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to German Culture")
+
+
+Safe_con_sex_uw <- dt_for_sm %>% 
+  group_by(scenario, SEX)%>%
+  summarise(mean=mean(threat_safety),
+            sd=sqrt(var(threat_safety)),
+            se= sd/sqrt(length(.)),
+            ci=1.96*se) %>% 
+  mutate(Threat_type="Threats to Safety")
+
+
+Thr_sex_uw <- rbind(non_accept_sex_uw, Job_com_sex_uw, Mate_com_sex_uw, Cul_thr_sex_uw, Safe_con_sex_uw)
+names(Thr_sex_uw) <- tolower(names(Thr_sex_uw))
+
+Thr_sex_uw$scenario <- factor(Thr_sex_uw$scenario , 
+                       levels = c("brown_male_0", 
+                                  "brown_male_50", 
+                                  "brown_male_100", 
+                                  "white_male_100", 
+                                  "German_male_0", 
+                                  "German_male_50", 
+                                  "German_male_100"), 
+                       labels= c("Non-White Refugee Male 0%",
+                                 "Non-White Refugee Male 50%",
+                                 "Non-White Refugee Male 100%",
+                                 "White Refugee Male 100%",
+                                 "German Male 0%",
+                                 "German Male 50%", 
+                                 "German Male 100%"), ordered = T)
+
+
+Thr_sex_uw <- Thr_sex_uw[order(Thr_sex_uw$threat_type, Thr_sex_uw$scenario),]
+
+print(Thr_sex_uw, n=30)
+
+mean.tab_sex_uw <- gt(data = Thr_sex_uw) %>% 
+  tab_header(
+    title = "Unweighted Mean Scores by Conditions across Sex of Respondants")%>%
+  tab_source_note("confidence Level: 0.95")
+
+mean.tab_sex_uw
+
+```
+
+
+### Non-Acceptance
+##### Unweighted pairwise p value
+```{r}
+
+non_accept_sex_t_test <-dt_for_sm %>% group_by(SEX)%>%
+  pairwise_t_test(non_accept~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+non_accept_sex_t_test <- non_accept_sex_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+non_accept_sex_t_test <- non_accept_sex_t_test %>% 
+  filter(xmin==1&xmax==2&SEX=="Male"|xmin==1&xmax==2&SEX=="Female"|xmin==2&xmax==3&SEX=="Male"|xmin==2&xmax==3&SEX=="Female"|
+           xmin==1&xmax==3&SEX=="Male"|xmin==1&xmax==3&SEX=="Female"|xmin==3&xmax==4&SEX=="Male"|xmin==3&xmax==4&SEX=="Female"|
+           xmin==1&xmax==5&SEX=="Male"|xmin==1&xmax==5&SEX=="Female"|xmin==2&xmax==6&SEX=="Male"|xmin==2&xmax==6&SEX=="Female"|
+           xmin==3&xmax==7&SEX=="Male"|xmin==3&xmax==7&SEX=="Female")
+
+```
+
+
+```{r}
+
+non_accept_sex_t_test_s6 <- non_accept_sex_t_test %>% 
+  filter(xmin==1&xmax==2&SEX=="Male"|xmin==1&xmax==2&SEX=="Female"|
+           xmin==2&xmax==3&SEX=="Male"|xmin==2&xmax==3&SEX=="Female"|
+           xmin==1&xmax==3&SEX=="Male"|xmin==1&xmax==3&SEX=="Female"|
+           xmin==3&xmax==4&SEX=="Male"|xmin==3&xmax==4&SEX=="Female")
+
+non_accept_sex_s6 <- non_accept_sex_uw %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the SEX variable
+non_accept_sex_t_test_s6$xmin <- ifelse(non_accept_sex_t_test_s6$SEX == "Male", non_accept_sex_t_test_s6$xmin - 0.25, non_accept_sex_t_test_s6$xmin + 0.25)
+non_accept_sex_t_test_s6$xmax <- ifelse(non_accept_sex_t_test_s6$SEX == "Male", non_accept_sex_t_test_s6$xmax - 0.25, non_accept_sex_t_test_s6$xmax + 0.25)
+
+```
+
+
+```{r}
+
+plot_non_accept_sex <- non_accept_sex_s6  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=SEX), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=SEX), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=SEX ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Non-Acceptance")+
+  xlab(NULL)+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.3))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#1D2648","#7480AE"))
+
+```
+
+
+```{r, fig.height=6, fig.width=8}
+
+plot_non_accept_sex <-plot_non_accept_sex + stat_pvalue_manual(non_accept_sex_t_test_s6, 
+                                                               label = "significance",y.position = c(5, 5.7, 5, 5, 
+                                                                                                        5.4, 6, 5.4, 5.4),
+                                                               bracket.shorten = 0.03)
+
+plot_non_accept_sex
+
+```
+
+```{r}
+
+ # ggsave(filename = "U:/sex_ratio/output/Figure_S6.tiff", plot_non_accept_sex, width = 16, height = 10, dpi=300, units = "cm")
+
+```
+
+
+### Perceived Threats
+#### Job competition
+##### Unweighted pairwise p value
+```{r}
+
+threat_job_sex_t_test <-dt_for_sm %>% group_by(SEX)%>%
+  pairwise_t_test(threat_job~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_job_sex_t_test <- threat_job_sex_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_job_sex_t_test <- threat_job_sex_t_test %>% 
+  filter(xmin==1&xmax==2&SEX=="Male"|xmin==1&xmax==2&SEX=="Female"|xmin==2&xmax==3&SEX=="Male"|xmin==2&xmax==3&SEX=="Female"|
+           xmin==1&xmax==3&SEX=="Male"|xmin==1&xmax==3&SEX=="Female"|xmin==3&xmax==4&SEX=="Male"|xmin==3&xmax==4&SEX=="Female"|
+           xmin==1&xmax==5&SEX=="Male"|xmin==1&xmax==5&SEX=="Female"|xmin==2&xmax==6&SEX=="Male"|xmin==2&xmax==6&SEX=="Female"|
+           xmin==3&xmax==7&SEX=="Male"|xmin==3&xmax==7&SEX=="Female")
+
+```
+
+
+```{r}
+
+threat_job_sex_t_test_s7 <- threat_job_sex_t_test %>% 
+  filter(xmin==1&xmax==2&SEX=="Male"|xmin==1&xmax==2&SEX=="Female"|
+           xmin==2&xmax==3&SEX=="Male"|xmin==2&xmax==3&SEX=="Female"|
+           xmin==1&xmax==3&SEX=="Male"|xmin==1&xmax==3&SEX=="Female"|
+           xmin==3&xmax==4&SEX=="Male"|xmin==3&xmax==4&SEX=="Female")
+
+threat_job_sex_s7 <- Job_com_sex %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the SEX variable
+threat_job_sex_t_test_s7$xmin <- ifelse(threat_job_sex_t_test_s7$SEX == "Male", threat_job_sex_t_test_s7$xmin - 0.25, threat_job_sex_t_test_s7$xmin + 0.25)
+threat_job_sex_t_test_s7$xmax <- ifelse(threat_job_sex_t_test_s7$SEX == "Male", threat_job_sex_t_test_s7$xmax - 0.25, threat_job_sex_t_test_s7$xmax + 0.25)
+
+```
+
+
+```{r}
+
+plot_threat_job_sex <- threat_job_sex_s7  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=SEX), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=SEX), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=SEX ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Job competition")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.5))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#1D2648","#7480AE"))
+
+```
+
+
+```{r, fig.height=6, fig.width=8}
+
+plot_threat_job_sex <-plot_threat_job_sex + stat_pvalue_manual(threat_job_sex_t_test_s7, 
+                                                               label = "significance",y.position = c(5.1, 5.85, 5.1, 5.1, 
+                                                                                                        5.5, 6.1, 5.5, 5.5),
+                                                               bracket.shorten = 0.03)
+
+plot_threat_job_sex
+
+```
+
+
+#### Mate competition
+##### Unweighted pairwise p value
+```{r}
+
+threat_mate_sex_t_test <-dt_for_sm %>% group_by(SEX)%>%
+  pairwise_t_test(threat_mate~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_mate_sex_t_test <- threat_mate_sex_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_mate_sex_t_test <- threat_mate_sex_t_test %>% 
+  filter(xmin==1&xmax==2&SEX=="Male"|xmin==1&xmax==2&SEX=="Female"|xmin==2&xmax==3&SEX=="Male"|xmin==2&xmax==3&SEX=="Female"|
+           xmin==1&xmax==3&SEX=="Male"|xmin==1&xmax==3&SEX=="Female"|xmin==3&xmax==4&SEX=="Male"|xmin==3&xmax==4&SEX=="Female"|
+           xmin==1&xmax==5&SEX=="Male"|xmin==1&xmax==5&SEX=="Female"|xmin==2&xmax==6&SEX=="Male"|xmin==2&xmax==6&SEX=="Female"|
+           xmin==3&xmax==7&SEX=="Male"|xmin==3&xmax==7&SEX=="Female")
+
+```
+
+
+```{r}
+
+threat_mate_sex_t_test_s7 <- threat_mate_sex_t_test %>% 
+  filter(xmin==1&xmax==2&SEX=="Male"|xmin==1&xmax==2&SEX=="Female"|
+           xmin==2&xmax==3&SEX=="Male"|xmin==2&xmax==3&SEX=="Female"|
+           xmin==1&xmax==3&SEX=="Male"|xmin==1&xmax==3&SEX=="Female"|
+           xmin==3&xmax==4&SEX=="Male"|xmin==3&xmax==4&SEX=="Female")
+
+threat_mate_sex_s7 <- Mate_com_sex %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the SEX variable
+threat_mate_sex_t_test_s7$xmin <- ifelse(threat_mate_sex_t_test_s7$SEX == "Male", threat_mate_sex_t_test_s7$xmin - 0.25, threat_mate_sex_t_test_s7$xmin + 0.25)
+threat_mate_sex_t_test_s7$xmax <- ifelse(threat_mate_sex_t_test_s7$SEX == "Male", threat_mate_sex_t_test_s7$xmax - 0.25, threat_mate_sex_t_test_s7$xmax + 0.25)
+
+```
+
+
+```{r}
+
+plot_threat_mate_sex <- threat_mate_sex_s7  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=SEX), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=SEX), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=SEX ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Mate competition")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.5))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#1D2648","#7480AE"))
+
+```
+
+```{r, fig.height=6, fig.width=8}
+
+plot_threat_mate_sex <-plot_threat_mate_sex + stat_pvalue_manual(threat_mate_sex_t_test_s7, 
+                                                               label = "significance",y.position = c(5, 5.8, 5, 5, 
+                                                                                                        5.4, 6.1, 5.4, 5.4),
+                                                               bracket.shorten = 0.03)
+
+plot_threat_mate_sex
+
+```
+
+
+#### Safety
+##### Unweighted pairwise p value
+```{r}
+
+threat_safe_sex_t_test <-dt_for_sm %>% group_by(SEX)%>%
+  pairwise_t_test(threat_safety~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_safe_sex_t_test <- threat_safe_sex_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_safe_sex_t_test <- threat_safe_sex_t_test %>% 
+  filter(xmin==1&xmax==2&SEX=="Male"|xmin==1&xmax==2&SEX=="Female"|xmin==2&xmax==3&SEX=="Male"|xmin==2&xmax==3&SEX=="Female"|
+           xmin==1&xmax==3&SEX=="Male"|xmin==1&xmax==3&SEX=="Female"|xmin==3&xmax==4&SEX=="Male"|xmin==3&xmax==4&SEX=="Female"|
+           xmin==1&xmax==5&SEX=="Male"|xmin==1&xmax==5&SEX=="Female"|xmin==2&xmax==6&SEX=="Male"|xmin==2&xmax==6&SEX=="Female"|
+           xmin==3&xmax==7&SEX=="Male"|xmin==3&xmax==7&SEX=="Female")
+
+```
+
+```{r}
+
+threat_safe_sex_t_test_s7 <- threat_safe_sex_t_test %>% 
+  filter(xmin==1&xmax==2&SEX=="Male"|xmin==1&xmax==2&SEX=="Female"|
+           xmin==2&xmax==3&SEX=="Male"|xmin==2&xmax==3&SEX=="Female"|
+           xmin==1&xmax==3&SEX=="Male"|xmin==1&xmax==3&SEX=="Female"|
+           xmin==3&xmax==4&SEX=="Male"|xmin==3&xmax==4&SEX=="Female")
+
+threat_safe_sex_s7 <- Safe_con_sex %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the SEX variable
+threat_safe_sex_t_test_s7$xmin <- ifelse(threat_safe_sex_t_test_s7$SEX == "Male", threat_safe_sex_t_test_s7$xmin - 0.25, threat_safe_sex_t_test_s7$xmin + 0.25)
+threat_safe_sex_t_test_s7$xmax <- ifelse(threat_safe_sex_t_test_s7$SEX == "Male", threat_safe_sex_t_test_s7$xmax - 0.25, threat_safe_sex_t_test_s7$xmax + 0.25)
+
+```
+
+
+```{r}
+
+plot_threat_safe_sex <- threat_safe_sex_s7  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=SEX), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=SEX), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=SEX ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Safety")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.5))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#1D2648","#7480AE"))
+
+```
+
+
+```{r, fig.height=6, fig.width=8}
+
+plot_threat_safe_sex <-plot_threat_safe_sex + stat_pvalue_manual(threat_safe_sex_t_test_s7, 
+                                                               label = "significance",y.position = c(5.1, 5.8, 5.1, 5.1, 
+                                                                                                        5.5, 6.15, 5.5, 5.5),
+                                                               bracket.shorten = 0.03)
+
+plot_threat_safe_sex
+
+```
+
+
+#### Cultural threats
+##### Unweighted pairwise p value
+```{r}
+
+
+dt_cul<- dt_for_sm %>% filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+dt_cul$scenario <- factor(dt_cul$equation,
+levels = c(1,2,3,4),
+labels = c("brown_male_0", "brown_male_50", "brown_male_100", "white_male_100"))
+
+
+threat_culture_sex_t_test <-dt_cul %>% group_by(SEX)%>%
+  pairwise_t_test(threat_culture~scenario, pool.sd = FALSE)%>% 
+  mutate(significance = case_when(
+    p < 0.001 ~ "***",
+    p < 0.01 ~ "**",
+    p < 0.05 ~ "*",
+    p < 0.1 ~ ".",
+    TRUE ~ "ns"
+  )) 
+
+threat_culture_sex_t_test <- threat_culture_sex_t_test %>% add_xy_position(x="scenario", dodge=0.9)
+threat_culture_sex_t_test <- threat_culture_sex_t_test %>% 
+  filter(xmin==1&xmax==2&SEX=="Male"|xmin==1&xmax==2&SEX=="Female"|xmin==2&xmax==3&SEX=="Male"|xmin==2&xmax==3&SEX=="Female"|
+           xmin==1&xmax==3&SEX=="Male"|xmin==1&xmax==3&SEX=="Female"|xmin==3&xmax==4&SEX=="Male"|xmin==3&xmax==4&SEX=="Female"|
+           xmin==1&xmax==5&SEX=="Male"|xmin==1&xmax==5&SEX=="Female"|xmin==2&xmax==6&SEX=="Male"|xmin==2&xmax==6&SEX=="Female"|
+           xmin==3&xmax==7&SEX=="Male"|xmin==3&xmax==7&SEX=="Female")
+
+```
+
+```{r}
+
+threat_culture_sex_t_test_s7 <- threat_culture_sex_t_test %>% 
+  filter(xmin==1&xmax==2&SEX=="Male"|xmin==1&xmax==2&SEX=="Female"|
+           xmin==2&xmax==3&SEX=="Male"|xmin==2&xmax==3&SEX=="Female"|
+           xmin==1&xmax==3&SEX=="Male"|xmin==1&xmax==3&SEX=="Female"|
+           xmin==3&xmax==4&SEX=="Male"|xmin==3&xmax==4&SEX=="Female")
+
+threat_culture_sex_s7 <- Cul_thr_sex %>%  filter(scenario=="brown_male_0"|scenario=="brown_male_50"|scenario=="brown_male_100"|scenario=="white_male_100")
+
+```
+
+```{r}
+
+# Recode the values based on the SEX variable
+threat_culture_sex_t_test_s7$xmin <- ifelse(threat_culture_sex_t_test_s7$SEX == "Male", threat_culture_sex_t_test_s7$xmin - 0.25, threat_culture_sex_t_test_s7$xmin + 0.25)
+threat_culture_sex_t_test_s7$xmax <- ifelse(threat_culture_sex_t_test_s7$SEX == "Male", threat_culture_sex_t_test_s7$xmax - 0.25, threat_culture_sex_t_test_s7$xmax + 0.25)
+
+```
+
+
+```{r}
+
+
+plot_threat_culture_sex <- threat_culture_sex_s7  %>% 
+  ggplot()+
+  geom_bar(aes(x=scenario, y=mean, fill=SEX), stat = "identity" ,width=0.8,alpha=0.7, position=position_dodge(width=.9))+
+  geom_errorbar(aes(x=scenario, ymin=mean-ci, ymax=mean+ci, group=SEX), width=0.2, colour="orange", alpha=0.9, position=position_dodge(width=1))+
+  geom_text(aes(x=scenario, y=mean, group=SEX ,label=sprintf("%0.2f",round(mean, digits = 2))), 
+            vjust=1.6, position = position_dodge(0.9),
+            color="white", size=3.5)+
+  theme_classic()+
+  theme(legend.position ="bottom",
+        legend.title = element_blank())+
+  ylab("Level of Perceived Threats")+
+  xlab(NULL)+
+  ggtitle("Culture")+
+  scale_y_continuous(breaks = c(0,1,2,3,4,5), expand = expansion(mult=c(0,0)))+
+  coord_cartesian(ylim = c(0,6.5))+
+  scale_x_discrete(labels = c("brown_male_0" = "Non-White\nMale 0%", "brown_male_50" = "Non-White\nMale 50%",
+                              "brown_male_100" = "Non-White\nMale 100%", "white_male_100" = "White\nMale 100%"))+
+  scale_fill_manual(values = c("#1D2648","#7480AE"))
+
+```
+
+
+
+```{r, fig.height=6, fig.width=8}
+
+plot_threat_culture_sex <-plot_threat_culture_sex + stat_pvalue_manual(threat_culture_sex_t_test_s7, 
+                                                               label = "significance",y.position = c(4.8, 5.7, 4.8, 4.8, 
+                                                                                                        5.3, 6.1, 5.3, 5.3),
+                                                               bracket.shorten = 0.03)
+
+plot_threat_culture_sex
+
+```
+
+#### conbine 4 figures
+
+```{r, fig.height=7, fig.width=12}
+# tiff("output/Figure_S7.tiff", units = "cm", width = 27 , height = 17, res= 400)
+
+ggarrange(plot_threat_job_sex, plot_threat_mate_sex, plot_threat_safe_sex, plot_threat_culture_sex, 
+          labels = c("A","B","C","D"),
+          ncol = 2,nrow = 2, common.legend = TRUE, legend = "bottom") 
+
+
+# dev.off()
+```
+
